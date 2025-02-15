@@ -1,0 +1,45 @@
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main  # Adjust if using a different branch
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚀 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🔧 Install Git LFS (if needed)
+        run: |
+          sudo apt update
+          sudo apt install git-lfs
+          git lfs install
+
+      - name: 🚀 Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          
+          # Clone the Hugging Face Space repo
+          git clone https://huggingface.co/spaces/$HF_SPACE space-repo
+          
+          # Sync new files
+          rsync -av --exclude '.git' ./ space-repo/
+          
+          # Commit and push changes
+          cd space-repo
+          git add .
+          if git diff-index --quiet HEAD --; then
+            echo "No changes to deploy"
+          else
+            git commit -m "Automated deployment from GitHub Actions"
+            git push https://huggingface:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE
+          fi
