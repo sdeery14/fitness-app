@@ -3,32 +3,29 @@ FROM python:3.12-slim
 # Install Poetry
 RUN pip install --upgrade poetry
 
-# Set the working directory
-WORKDIR /code
+# Set the working directory to /app (not /code)
+WORKDIR /app
 
-# Copy pyproject.toml and poetry.lock files
-COPY pyproject.toml poetry.lock /code/
+# Copy only dependency files first for caching
+COPY pyproject.toml poetry.lock ./
 
 # Install dependencies
 RUN poetry install --no-root --only main
 
-# Set up a new user named "user" with user ID 1000
+# Create a user for security
 RUN useradd -m -u 1000 user
 
-# Switch to the "user" user
+# Switch to non-root user
 USER user
 
-# Set home to the user's home directory
+# Set environment variables for poetry and path
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
-# Set the working directory to the user's home directory
-WORKDIR $HOME/app
+# Copy project files into container
+COPY --chown=user . .
 
-# Copy the current directory contents into the container at $HOME/app setting the owner to the user
-COPY --chown=user . $HOME/app
-
-# Expose the port that Gradio will run on
+# Expose port for Gradio
 EXPOSE 7860
 
 # Run the Gradio app
