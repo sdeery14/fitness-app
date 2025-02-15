@@ -7,7 +7,7 @@ RUN pip install --upgrade poetry
 WORKDIR /code
 
 # Copy pyproject.toml and poetry.lock files
-COPY pyproject.toml poetry.lock* /code/
+COPY pyproject.toml poetry.lock /code/
 
 # Install dependencies
 RUN poetry install --no-root --only main
