@@ -3,10 +3,14 @@ FROM python:3.12-slim
 # Install Poetry
 RUN pip install --upgrade poetry
 
-# Set the working directory to /app (not /code)
+# Configure Poetry to create virtualenvs inside the project directory
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_VIRTUALENVS_CREATE=true
+
+# Set the working directory
 WORKDIR /app
 
-# Copy only dependency files first for caching
+# Copy dependency files first (for Docker cache efficiency)
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies
@@ -19,8 +23,7 @@ RUN useradd -m -u 1000 user
 USER user
 
 # Set environment variables for poetry and path
-ENV HOME=/home/user \
-    PATH=/home/user/.local/bin:$PATH
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy project files into container
 COPY --chown=user . .
@@ -29,4 +32,4 @@ COPY --chown=user . .
 EXPOSE 7860
 
 # Run the Gradio app
-CMD ["poetry", "run", "python", "app.py"]
+CMD ["python", "app.py"]
