@@ -11,6 +11,8 @@ gradio = "^5.16.0"
 openai = "^1.63.0"
 python-dotenv = "^1.0.1"
 ipykernel = "^6.29.5"
+pytest = "^8.3.4"
+chardet = "^5.2.0"
 
 
 [build-system]

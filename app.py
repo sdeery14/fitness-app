@@ -1,8 +1,7 @@
 import gradio as gr
 import random
 import time
-import openai # for error handling
-from openai import OpenAI
+from openai import OpenAI, APIError, APIConnectionError, RateLimitError
 from dotenv import load_dotenv
 import os
 
@@ -34,17 +33,17 @@ def chatbot_message(history):
         )
         for chunk in completion:
             yield chunk.choices[0].delta.content
-    except openai.APIError as e:
-        #Handle API error here, e.g. retry or log
-        yield f"OpenAI API returned an API Error: {e}"
-        pass
-    except openai.APIConnectionError as e:
+    except APIConnectionError as e:
         #Handle connection error here
         yield f"Failed to connect to OpenAI API: {e}"
         pass
-    except openai.RateLimitError as e:
+    except RateLimitError as e:
         #Handle rate limit error (we recommend using exponential backoff)
         yield f"OpenAI API request exceeded rate limit: {e}"
+        pass
+    except APIError as e:
+        #Handle API error here, e.g. retry or log
+        yield f"OpenAI API returned an API Error: {e}"
         pass
 
 def initialize_history():
