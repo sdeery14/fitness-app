@@ -17,13 +17,12 @@ with gr.Blocks() as demo:
                 gr.Markdown("### Enter Your Fitness Information")
                 height_in = gr.Number(label="Height (inches)", value=None)
                 weight_lb = gr.Number(label="Weight (pounds)", value=None)
-                body_fat = gr.Number(label="Body Fat Percentage", value=None)
                 age = gr.Number(label="Age", value=None)
                 sex = gr.Radio(label="Sex", choices=["Male", "Female"], value=None)
                 activity_level = gr.Dropdown(label="Current Activity Level", choices=["Sedentary", "Lightly active", "Moderately active", "Very active", "Super active"], value=None)
                 goals = gr.Textbox(label="Fitness Goals", placeholder="e.g., Lose weight, Build muscle, Improve endurance", value=None)
                 diet_phase = gr.Radio(label="Diet Phase", choices=["Cutting", "Bulking", "Maintenance"], value=None)
-                generate_fitness_plan = gr.Button("Generate Fitness Plan")
+                generate_fitness_plan_button = gr.Button("Generate Fitness Plan")
     with gr.Row():
         fitness_plan = gr.JSON(label="Your Fitness Plan")
 
@@ -39,14 +38,10 @@ with gr.Blocks() as demo:
     )
     clear.click(lambda: None, None, chatbot, queue=False)
 
-    generate_fitness_plan.click(
-        fitness_assistant.add_intake_form_to_chat,
-        [height_in, weight_lb, body_fat, age, sex, activity_level, goals, diet_phase],
-        []
-    ).then(
-        fitness_assistant.process_generate_fitness_plan,
-        [],
-        [fitness_plan]
+    generate_fitness_plan_button.click(
+        fitness_assistant.generate_fitness_plan,
+        [height_in, weight_lb, age, sex, activity_level, goals, diet_phase],
+        [chatbot, fitness_plan]
     )
 
 if __name__ == "__main__":

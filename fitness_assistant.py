@@ -100,28 +100,36 @@ class FitnessAssistant():
         self.welcome_message = welcome_message
         self.chat_history_full = [self.system_prompt, self.welcome_message]
         self.chat_history_display = [self.system_prompt, self.welcome_message]
+        self.fitness_plan = {}
 
-    def add_intake_form_to_chat(self, height_in, weight_lbs, body_fat, age, sex, activity_level, goals, diet_phase):
-        intake_data = {
+    def generate_fitness_plan(self, height_in, weight_lbs, age, sex, activity_level, goals, diet_phase):
+
+        # Add thinking message to display chat
+        self.chat_history_display.append({"role": "assistant", "content": "Updating intake form.", "metadata": {"title": "Thinking..."}})
+        yield self.chat_history_display, None
+
+        # Update intake form
+        self.intake_form.update_values({
             "height_in": height_in,
             "weight_lbs": weight_lbs,
-            "body_fat": body_fat,
             "age": age,
             "sex": sex,
             "activity_level": activity_level,
             "goals": goals,
             "diet_phase": diet_phase
-        }
-        self.chat_history_full.append({"role": "system", "content": f"Here is the user's intake data: {intake_data}"})
-        self.chat_history_display.append({"role": "system", "content": "Intake form updated.", "metadata": {"title": "Intake Form Updated"}})
-        self.intake_form.update_values(intake_data)
+        })
 
-    def process_generate_fitness_plan(self):
-
+        # Add intake form data to full chat
+        self.chat_history_full.append({"role": "system", "content": f"Here is the user's intake data: {self.intake_form.model_dump()}"})
+    
+        # Add to thinking message in display chat
+        self.chat_history_display[-1]["content"] += "\nIntake form updated.\nGenerating fitness plan."
+        yield self.chat_history_display, None
+        
         # Calculate BMR, TDEE, daily calories, and macros
         #bmr, tdee, daily_calories, macros = self.calculate_calories_and_macros()
 
-        # Start streaming the OpenAI API generated Fitness Plan
+        # Stream the OpenAI API generated Fitness Plan
         with client.beta.chat.completions.stream(
             model="gpt-4o",
             messages=self.chat_history_full,
@@ -131,7 +139,7 @@ class FitnessAssistant():
                 if event.type == "content.delta":
                     if event.parsed is not None:
                         # Yield the parsed data as it comes up
-                        yield event.parsed
+                        yield self.chat_history_display, event.parsed
                 elif event.type == "content.done":
                     print("content.done")
                 elif event.type == "error":
@@ -139,35 +147,17 @@ class FitnessAssistant():
 
         final_completion = stream.get_final_completion()
 
+        # Add to thinking message in display chat
+        self.chat_history_display[-1]["content"] += "\nFitness Plan generated."
+        yield self.chat_history_display, final_completion.choices[0].message.parsed.model_dump()
+
+        
+
 
     def add_message_to_chat(self, user_message, history: list):        
         self.chat_history_full.append({"role": "user", "content": user_message})
         self.chat_history_display.append({"role": "user", "content": user_message})
         return "", self.chat_history_display
-
-    def create_workout_plan(self):
-        completion = client.beta.chat.completions.parse(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."},
-            ],
-            response_format=FitnessPlan
-        )
-
-        return completion.choices[0].message.parsed
-
-    def create_meal_plan(self):
-        completion = client.beta.chat.completions.parse(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."},
-            ],
-            response_format=FitnessPlan
-        )
-
-        return completion.choices[0].message.parsed
 
     def call_function(self, tool_name, args):
         if tool_name == "create_fitness_plan":
