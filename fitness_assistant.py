@@ -105,7 +105,7 @@ class FitnessAssistant():
     def generate_fitness_plan(self, height_in, weight_lbs, age, sex, activity_level, goals, diet_phase):
 
         # Add thinking message to display chat
-        self.chat_history_display.append({"role": "assistant", "content": "Updating intake form.", "metadata": {"title": "Thinking..."}})
+        self.chat_history_display.append({"role": "assistant", "content": "Gathering intake form.📂", "metadata": {"title": "Thinking...🧠"}})
         yield self.chat_history_display, None
 
         # Update intake form
@@ -123,7 +123,7 @@ class FitnessAssistant():
         self.chat_history_full.append({"role": "system", "content": f"Here is the user's intake data: {self.intake_form.model_dump()}"})
     
         # Add to thinking message in display chat
-        self.chat_history_display[-1]["content"] += "\nIntake form updated.\nGenerating fitness plan."
+        self.chat_history_display[-1]["content"] += "\nIntake form updated.✔️\nGenerating fitness plan.✏️"
         yield self.chat_history_display, None
         
         # Calculate BMR, TDEE, daily calories, and macros
@@ -148,7 +148,7 @@ class FitnessAssistant():
         final_completion = stream.get_final_completion()
 
         # Add to thinking message in display chat
-        self.chat_history_display[-1]["content"] += "\nFitness Plan generated."
+        self.chat_history_display[-1]["content"] += "\nFitness Plan generated.✔️"
         yield self.chat_history_display, final_completion.choices[0].message.parsed.model_dump()
 
         
