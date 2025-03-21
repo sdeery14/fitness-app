@@ -1,8 +1,9 @@
-from openai import OpenAI, APIError, APIConnectionError, RateLimitError
+from openai import OpenAI
 from dotenv import load_dotenv
 from intake_form import IntakeForm
 import json
 from fitness_plan import FitnessPlan
+import requests
 
 load_dotenv()
 
@@ -22,34 +23,15 @@ class FitnessAssistant():
 
     You also help users create a fitness plan, which includes a workout plan and a meal plan.
 
-    In order to personalize the fitness the plan, the user can fill out an intake form.
+    In order to do this, you will need to ask the user for their fitness details,
+    and help them develop a personalized workout plan and meal plan.
 
-    The intake form includes fields for height, weight, body fat percentage, age, sex, activity level, and goals.
-
-    The user is able to update the intake form directly. 
-
-    When a user shares their goals, help them develop a personalized workout plan that fits their lifestyle, fitness level, and objectives. 
+    Fitness details include fitness goals, current activity level, desired activity level, height, weight, body fat percentage, 
+    age, sex, activity level.
     
-    If they want, create a meal plan that supports their workouts by focusing on balanced, nutrient-rich foods. 
-
-    Be encouraging, informative, and adaptable to the user's preferences. 
-    
-    Avoid overly technical jargon unless the user requests detailed explanations. 
-    
-    Always prioritize safe, sustainable, and realistic practices.
-
     Do not discuss topics unrelated to fitness, health, nutrition, or exercise. 
     
     If a user asks about something off-topic, politely steer the conversation back to their fitness goals.
-    """
-    }
-
-    default_welcome_message = {
-        "role": "assistant",
-        "content": """
-    Hello! I'm here to help you with your fitness journey. Whether you're looking to lose weight, build muscle, or just get healthier, I can help answer your fitness questions and provide personalized advice and plans.
-
-    Do you have any questions or would you like to get started making your fitness plan?
     """
     }
 
@@ -91,16 +73,35 @@ class FitnessAssistant():
 
     def __init__(
             self, name: str = "FitBot", 
-            system_prompt: dict = default_system_prompt, 
-            welcome_message: dict = default_welcome_message
+            system_prompt: dict = default_system_prompt
             ):
         self.name = name
         self.intake_form = IntakeForm()
         self.system_prompt = system_prompt
-        self.welcome_message = welcome_message
-        self.chat_history_full = [self.system_prompt, self.welcome_message]
-        self.chat_history_display = [self.system_prompt, self.welcome_message]
+        self.welcome_message = self.process_chat([self.system_prompt])
+        self.chat_history_full = []
+        self.chat_history_display = []
         self.fitness_plan = {}
+
+    def generate_welcome_message(self):
+        """
+        Uses OpenAI to generate a personalized greeting and first question for the user.
+        """
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[self.system_prompt]
+        )
+
+        greeting_message = response.choices[0].message.content.strip()
+
+        self.welcome_message = {"role": "assistant", "content": greeting_message}
+        self.chat_history_full.append(self.welcome_message)
+        self.chat_history_display.append(self.welcome_message)
+
+        return self.chat_history_display
+
+
 
     def generate_fitness_plan(self, height_in, weight_lbs, age, sex, activity_level, goals, diet_phase):
 
@@ -151,10 +152,9 @@ class FitnessAssistant():
         self.chat_history_display[-1]["content"] += "\nFitness Plan generated.✔️"
         yield self.chat_history_display, final_completion.choices[0].message.parsed.model_dump()
 
-        
+        final_completion.choices[0].message.parsed
 
-
-    def add_message_to_chat(self, user_message, history: list):        
+    def add_message_to_chat(self, user_message):        
         self.chat_history_full.append({"role": "user", "content": user_message})
         self.chat_history_display.append({"role": "user", "content": user_message})
         return "", self.chat_history_display
@@ -296,6 +296,40 @@ class FitnessAssistant():
         daily_calories = self.get_daily_calories(tdee, self.intake_form.diet_phase)
         macros = self.calculate_macros(daily_calories, self.intake_form.diet_phase)
         return bmr, tdee, daily_calories, macros
+
+    def search_usda_api(self, query: str):
+        url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+        headers = {"Content-Type": "application/json"}
+        data = {"query": query}
+        params = {"api_key": "DEMO_KEY"}
+        
+        response = requests.post(url, headers=headers, json=data, params=params)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            response.raise_for_status()
+
+    def process_meal_plan(self, meal_plan):
+        """
+        Loops through each food in the meal plan, runs the food name through the search_usda_api function,
+        and appends the results to the food object.
+
+        Args:
+            meal_plan (list): The meal plan JSON object.
+            search_usda_api (function): Function to search USDA API for food data.
+
+        Returns:
+            list: Updated meal plan with USDA API results added to each food item.
+        """
+        for meal in meal_plan:
+            for food in meal.get("foods", []):
+                food_name = food.get("food_name", "")
+                if food_name:
+                    food["usda_data"] = self.search_usda_api(food_name)  # Append USDA API results
+
+        return meal_plan
+
 
 
     
