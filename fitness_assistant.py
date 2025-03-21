@@ -169,11 +169,9 @@ class FitnessAssistant():
         stream = client.chat.completions.create(
             model="gpt-4o",
             messages=history,
-            tools=self.tools,
+            #tools=self.tools,
             stream=True
         )
-        for chunk in stream:
-            yield chunk
 
         # Initialize the assistant message in the history
         history.append({"role": "assistant", "content": ""})
