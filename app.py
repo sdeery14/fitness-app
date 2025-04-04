@@ -1,6 +1,6 @@
 import gradio as gr
 import os
-from fitness_assistant import FitnessAssistant
+from src.fitness_assistant import FitnessAssistant
 
 # Create a Fitness Assistant instance
 fitness_assistant = FitnessAssistant()
