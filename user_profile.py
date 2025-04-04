@@ -2,7 +2,7 @@ from pydantic import BaseModel, PositiveFloat, PositiveInt, Field
 from typing import Literal
 
 # Pydantic model for intake form validation
-class IntakeForm(BaseModel):
+class UserProfile(BaseModel):
     height_in: PositiveFloat = None  # Enforce positive height, allow None
     weight_lbs: PositiveFloat = None  # Enforce positive weight, allow None
     age: PositiveInt = None  # Age must be a positive integer, allow None
@@ -16,3 +16,6 @@ class IntakeForm(BaseModel):
         for key, value in updates.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+
+    # Calculate BMR, TDEE, daily calories, and macros
+        #bmr, tdee, daily_calories, macros = self.calculate_calories_and_macros()

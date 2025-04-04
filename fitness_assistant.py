@@ -1,6 +1,6 @@
 from openai import OpenAI
 from dotenv import load_dotenv
-from intake_form import IntakeForm
+from user_profile import UserProfile
 import json
 from fitness_plan import FitnessPlan
 import requests
@@ -18,16 +18,18 @@ class FitnessAssistant():
         "content": """
     You are a friendly, knowledgeable fitness assistant. 
     
-    Your goal is to help users achieve their fitness goals by providing clear, 
-    actionable advice about exercise, nutrition, and healthy habits.
+    Your goal is to create a personalized fitness plan for the user.
+    
+    A fitness plan includes a workout plan and a meal plan.
 
-    You also help users create a fitness plan, which includes a workout plan and a meal plan.
+    You will lead the conversation by asking the user questions and updating the fitness plan based on the results. 
 
-    In order to do this, you will need to ask the user for their fitness details,
-    and help them develop a personalized workout plan and meal plan.
+    Create a welcome message based on the following guidelines:
+    - Start with a concise explanation of the process.
+    - Do not overwhelm the user with information.
+    - Ask for the user's fitness goals but let them tell you whatever they want.
 
-    Fitness details include fitness goals, current activity level, desired activity level, height, weight, body fat percentage, 
-    age, sex, activity level.
+    Once the goal is determined, create the fitness plan, and then go over each section to help the user personalize it.
     
     Do not discuss topics unrelated to fitness, health, nutrition, or exercise. 
     
@@ -39,30 +41,12 @@ class FitnessAssistant():
         {
             "type": "function",
             "function": {
-                "name": "update_intake_form",
-                "description": "Fills the intake form with any details provided in the user prompt",
+                "name": "generate_fitness_plan",
+                "description": "Generates a fitness plan based on the user's fitness goals.",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "intake_form": {"type": "string", "description": "The workout plan to be created."}
-                    },
-                    "required": ["workout_plan"],
-                    "additionalProperties": False
-                },
-                "strict": True
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "create_fitness_plan",
-                "description": "Creates a workout plan based on the user's fitness goals.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "workout_plan": {"type": "string", "description": "The workout plan to be created."}
-                    },
-                    "required": ["workout_plan"],
+                    "properties": {},
+                    "required": [],
                     "additionalProperties": False
                 },
                 "strict": True
@@ -76,12 +60,12 @@ class FitnessAssistant():
             system_prompt: dict = default_system_prompt
             ):
         self.name = name
-        self.intake_form = IntakeForm()
+        self.user_profile = UserProfile()
         self.system_prompt = system_prompt
-        self.welcome_message = self.process_chat([self.system_prompt])
-        self.chat_history_full = []
+        self.chat_history_full = [self.system_prompt]
         self.chat_history_display = []
-        self.fitness_plan = {}
+        self.fitness_plan = None
+        self.generate_welcome_message()
 
     def generate_welcome_message(self):
         """
@@ -93,146 +77,95 @@ class FitnessAssistant():
             messages=[self.system_prompt]
         )
 
-        greeting_message = response.choices[0].message.content.strip()
+        greeting_message = response.choices[0].message.content
 
-        self.welcome_message = {"role": "assistant", "content": greeting_message}
-        self.chat_history_full.append(self.welcome_message)
-        self.chat_history_display.append(self.welcome_message)
+        self.add_message_to_chat(greeting_message, "assistant")
 
         return self.chat_history_display
 
+    def generate_fitness_plan(self):
 
+        # Add user profile data to full chat
+        self.chat_history_full.append({"role": "system", "content": f"Here is the user's profile data: {self.user_profile.model_dump()}"})        
 
-    def generate_fitness_plan(self, height_in, weight_lbs, age, sex, activity_level, goals, diet_phase):
-
-        # Add thinking message to display chat
-        self.chat_history_display.append({"role": "assistant", "content": "Gathering intake form.📂", "metadata": {"title": "Thinking...🧠"}})
-        yield self.chat_history_display, None
-
-        # Update intake form
-        self.intake_form.update_values({
-            "height_in": height_in,
-            "weight_lbs": weight_lbs,
-            "age": age,
-            "sex": sex,
-            "activity_level": activity_level,
-            "goals": goals,
-            "diet_phase": diet_phase
-        })
-
-        # Add intake form data to full chat
-        self.chat_history_full.append({"role": "system", "content": f"Here is the user's intake data: {self.intake_form.model_dump()}"})
-    
-        # Add to thinking message in display chat
-        self.chat_history_display[-1]["content"] += "\nIntake form updated.✔️\nGenerating fitness plan.✏️"
-        yield self.chat_history_display, None
-        
-        # Calculate BMR, TDEE, daily calories, and macros
-        #bmr, tdee, daily_calories, macros = self.calculate_calories_and_macros()
-
-        # Stream the OpenAI API generated Fitness Plan
-        with client.beta.chat.completions.stream(
+        # Get the OpenAI API generated Fitness Plan
+        completion = client.beta.chat.completions.parse(
             model="gpt-4o",
             messages=self.chat_history_full,
             response_format=FitnessPlan,
-        ) as stream:
-            for event in stream:
-                if event.type == "content.delta":
-                    if event.parsed is not None:
-                        # Yield the parsed data as it comes up
-                        yield self.chat_history_display, event.parsed
-                elif event.type == "content.done":
-                    print("content.done")
-                elif event.type == "error":
-                    print("Error in stream:", event.error)
+        ) 
+        
+        self.fitness_plan = completion.choices[0].message.parsed.model_dump()
 
-        final_completion = stream.get_final_completion()
+        return self.chat_history_display, self.fitness_plan
 
-        # Add to thinking message in display chat
-        self.chat_history_display[-1]["content"] += "\nFitness Plan generated.✔️"
-        yield self.chat_history_display, final_completion.choices[0].message.parsed.model_dump()
+    def add_message_to_chat(self, user_message, role="user", metadata=None):        
+        message = {"role": role, "content": user_message}
+        if metadata:
+            message["metadata"] = metadata
+        
+        self.chat_history_full.append(message)
+        self.chat_history_display.append(message)
 
-        final_completion.choices[0].message.parsed
-
-    def add_message_to_chat(self, user_message):        
-        self.chat_history_full.append({"role": "user", "content": user_message})
-        self.chat_history_display.append({"role": "user", "content": user_message})
+        # return an empty string for the front end to clear the user input box
+        # and return the updated chat history for display
         return "", self.chat_history_display
 
-    def call_function(self, tool_name, args):
-        if tool_name == "create_fitness_plan":
-            return self.create_fitness_plan(**args)
+    def call_function(self, name, args):
+        if name == "generate_fitness_plan":
+            return self.generate_fitness_plan(**args)
+        # if name == "send_email":
+        #     return send_email(**args)
 
-    def process_chat(self, history):
+    def process_chat(self):
 
         # Start streaming the OpenAI API response
-        stream = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model="gpt-4o",
-            messages=history,
-            #tools=self.tools,
-            stream=True
+            messages=self.chat_history_full,
+            tools=self.tools
         )
 
-        # Initialize the assistant message in the history
-        history.append({"role": "assistant", "content": ""})
+        # check if the response contains a tool call
+        if completion.choices[0].message.tool_calls is not None:
 
-        for chunk in stream:
+            
 
-            # Handle streaming function call response
-            if chunk.choices[0].delta.tool_calls is not None:
-                
-                # Add metadata to the last message in history if not present
-                if "metadata" not in history[-1]:
-                    history[-1]["metadata"] = {"title": "Thinking...\n"}
-                
-                # Yield the current state of history
-                yield history, None
+            # Call tools
+            for tool_call in completion.choices[0].message.tool_calls:
+                name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
 
-                final_tool_calls = {}
-                
-                # Collect all tool calls from the response
-                for tool_call in chunk.choices[0].delta.tool_calls or []:
-                    index = tool_call.index
-                    if index not in final_tool_calls:
-                        final_tool_calls[index] = tool_call
-                    final_tool_calls[index].function.arguments += tool_call.function.arguments
-                    history[-1]["content"] += str(tool_call.function.arguments)
-                    print(history[-1])
+                result = self.call_function(name, args)
 
-                # Yield the current state of history
-                yield history, None
+                # Add the tool call message to the chat history
+                self.chat_history_full.append(completion.choices[0].message)
 
-                # Execute each tool call and update the history with the results
-                for tool_call in final_tool_calls.values():
-                    tool_name = tool_call.function.name
-                    if tool_call.function.arguments:
-                        args = json.loads(tool_call.function.arguments)
-                        print(args)
-                        result = self.call_function(tool_name, args)
-                        print(result)
-                        history[-1]["content"] += f"\nFunction {tool_name} results: {str(result)}"
-                yield history, result
-                
-                # Initialize a new assistant message in the history
-                history.append({"role": "assistant", "content": ""})
-                
-                # Start a second stream to continue the conversation
-                second_stream = self.stream_openai_api(history)
-                if second_stream is None:
-                    return
+                # Add the tool call result to the chat history
+                self.chat_history_full.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": str(result)
+                })
 
-                # Initialize another assistant message in the history
-                history.append({"role": "assistant", "content": ""})
-                for chunk in second_stream:
-                    history[-1]["content"] += chunk.choices[0].delta.content or ""
-                    yield history, None
+            # Start streaming the OpenAI API response
+            completion = client.chat.completions.create(
+                model="gpt-4o",
+                messages=self.chat_history_full
+            )
+        
+        chatbot_response = completion.choices[0].message.content
 
-            # Handle regular content response
-            elif chunk.choices[0].delta.content is not None:
-                history[-1]["content"] += chunk.choices[0].delta.content or ""
-                yield history, None
+        self.add_message_to_chat(chatbot_response, "assistant")
 
-    
+        return self.chat_history_display, self.fitness_plan
+
+
+
+        
+
+        
+
     def calculate_bmr(weight_kg: float, height_cm: float, age: int, sex: str) -> float:
         """Calculate Basal Metabolic Rate (BMR) using the Mifflin-St Jeor Equation."""
         if sex.lower() == "male":

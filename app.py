@@ -9,7 +9,7 @@ with gr.Blocks() as demo:
 
     with gr.Row():
         with gr.Column():
-            chatbot = gr.Chatbot(type="messages", value=fitness_assistant.generate_welcome_message())
+            chatbot = gr.Chatbot(type="messages", value=fitness_assistant.chat_history_display, label="Fitness Assistant Chat")
             msg = gr.Textbox()
             clear = gr.Button("Clear")
         with gr.Column():
@@ -22,7 +22,7 @@ with gr.Blocks() as demo:
         queue=False
     ).then(
         fitness_assistant.process_chat, 
-        [chatbot], 
+        [], 
         [chatbot, fitness_plan]
     )
     clear.click(lambda: None, None, chatbot, queue=False)
