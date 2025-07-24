@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "fitness-agent"
+version = "0.1.0"
+description = ""
+authors = ["Sean Deery <sdeery14@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai-agents = {extras = ["litellm"], version = "^0.2.3"}
+python-dotenv = "^1.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
