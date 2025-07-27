@@ -21,7 +21,7 @@ if str(gradio_app_path) not in sys.path:
 
 try:
     from fitness_core import setup_logging, Config, get_logger
-    from fitness_core.agents.base import BaseAgent
+    from fitness_core.agents.base import FitnessAgent as CoreFitnessAgent
     from fitness_core.agents.models import AgentConfig
     from fitness_core.services.agent_runner import AgentRunner
     
@@ -29,7 +29,7 @@ try:
     setup_logging(level=Config.LOG_LEVEL, log_file=Config.LOG_FILE)
     logger = get_logger(__name__)
     
-    class FitnessAgent(BaseAgent):
+    class FitnessAgent(CoreFitnessAgent):
         """Main Fitness Agent class for backwards compatibility."""
         
         def __init__(self, config: AgentConfig = None):
@@ -43,7 +43,7 @@ try:
                     model_name="gpt-4",
                     temperature=0.7
                 )
-            super().__init__(config)
+            super().__init__(config=config)
             self.runner = AgentRunner()
         
         async def process_message(self, message: str, context: dict = None) -> str:
