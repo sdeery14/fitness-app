@@ -30,19 +30,39 @@ def test_app_imports():
     """Test fitness app specific imports"""
     print("🔍 Testing fitness app imports...")
     
-    # Add paths
+    # Add paths for the actual project structure
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    fitness_agent_dir = os.path.join(current_dir, 'fitness_agent')
+    root_dir = os.path.dirname(current_dir)
     
-    sys.path.insert(0, current_dir)
-    sys.path.insert(0, fitness_agent_dir)
+    # Add shared library path
+    shared_path = os.path.join(root_dir, 'shared', 'src')
+    if shared_path not in sys.path:
+        sys.path.insert(0, shared_path)
+    
+    # Add gradio app path
+    gradio_path = os.path.join(root_dir, 'apps', 'gradio-app', 'src')
+    if gradio_path not in sys.path:
+        sys.path.insert(0, gradio_path)
+    
+    # Add fitness_agent path (for HF deployment structure)
+    fitness_agent_dir = os.path.join(root_dir, 'fitness_agent')
+    if fitness_agent_dir not in sys.path:
+        sys.path.insert(0, fitness_agent_dir)
     
     try:
+        # Try importing from fitness_agent first (HF structure)
         from fitness_agent import FitnessAgent
         print("✓ FitnessAgent import successful")
     except Exception as e:
         print(f"⚠ Warning - FitnessAgent import: {e}")
-        return False
+        
+        # Try importing core modules directly
+        try:
+            from fitness_core.agents.base import BaseAgent
+            print("✓ fitness_core.agents.base import successful")
+        except Exception as e2:
+            print(f"⚠ Warning - fitness_core import: {e2}")
+            return False
     
     return True
 

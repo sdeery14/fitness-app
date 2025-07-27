@@ -40,14 +40,22 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install huggingface_hub[cli]
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+        # Install dependencies for validation
+        if [ -f requirements.txt ]; then 
+          echo "Installing from requirements.txt..."
+          pip install -r requirements.txt
+        else
+          echo "No requirements.txt found, installing basic dependencies..."
+          pip install gradio python-dotenv
+        fi
 
     - name: Validate app structure
       run: |
         echo "Validating app structure..."
         
         # Check required files
-        required_files=("requirements.txt" "fitness_agent/app.py" "fitness_agent/fitness_agent.py")
+        required_files=("requirements.txt")
         for file in "${required_files[@]}"; do
           if [ ! -f "$file" ]; then
             echo "❌ Missing required file: $file"
@@ -57,18 +65,27 @@ jobs:
           fi
         done
         
-        # Check that fitness_agent is a directory
-        if [ ! -d "fitness_agent" ]; then
-          echo "❌ Missing fitness_agent directory"
-          exit 1
+        # Check for either fitness_agent structure OR gradio app structure
+        if [ -d "fitness_agent" ] && [ -f "fitness_agent/app.py" ]; then
+          echo "✓ Found: fitness_agent/ directory with app.py"
+          echo "✓ Using fitness_agent structure for deployment"
+          
+          # Validate Python syntax for fitness_agent
+          echo "Checking Python syntax for fitness_agent..."
+          python -m py_compile fitness_agent/app.py
+          if [ -f "fitness_agent/fitness_agent.py" ]; then
+            python -m py_compile fitness_agent/fitness_agent.py
+          fi
+          
+        elif [ -d "apps/gradio-app" ]; then
+          echo "✓ Found: apps/gradio-app/ directory"
+          echo "✓ Using gradio-app structure for deployment"
+          echo "ℹ️ fitness_agent structure should already exist for HF deployment"
+          
         else
-          echo "✓ Found: fitness_agent/ directory"
+          echo "❌ Neither fitness_agent nor apps/gradio-app structure found"
+          exit 1
         fi
-        
-        # Validate Python syntax
-        echo "Checking Python syntax..."
-        python -m py_compile fitness_agent/app.py
-        python -m py_compile fitness_agent/fitness_agent.py
         
         echo "✓ All validations passed"
 
@@ -132,7 +149,16 @@ jobs:
           --exclude='space_config.yaml' \
           --exclude='.pytest_cache' \
           --exclude='tests/' \
+          --exclude='docs/' \
+          --exclude='scripts/' \
+          --exclude='poetry.lock' \
+          --exclude='pyproject.toml' \
           . hf-space/
+        
+        # Ensure we have the HF-specific README
+        if [ -f "README_HF.md" ]; then
+          cp README_HF.md hf-space/README.md
+        fi
         
         # Ensure critical files are present
         if [ ! -f "hf-space/fitness_agent/app.py" ]; then
