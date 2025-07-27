@@ -87,15 +87,15 @@ class FitnessAgent(Agent):
                 os.getenv("AI_MODEL") or 
                 os.getenv("ANTHROPIC_MODEL") or 
                 os.getenv("OPENAI_MODEL") or 
-                "claude-3.5-haiku"  # Default fallback
+                "gpt-4o-mini"  # Default fallback - reliable OpenAI model
             )
         
         # Validate the model name
         is_valid, validation_message = self.validate_model_name(model_name)
         if not is_valid:
             print(f"Warning: {validation_message}")
-            print(f"Falling back to default model: claude-3.5-haiku")
-            model_name = "claude-3.5-haiku"
+            print(f"Falling back to default model: gpt-4o-mini")
+            model_name = "gpt-4o-mini"
         
         # Resolve model name to full identifier
         if model_name in self.SUPPORTED_MODELS:
@@ -363,7 +363,7 @@ if __name__ == "__main__":
     print("\n" + "="*60 + "\n")
     
     # Create agent with default model
-    print("Creating agent with default model (claude-3.5-haiku)...")
+    print("Creating agent with default model (gpt-4o-mini)...")
     agent = FitnessAgent()
     print(f"✅ Created agent:")
     print(f"   Model name: {agent.model_name}")

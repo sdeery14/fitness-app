@@ -336,7 +336,7 @@ conversation_manager = ConversationManager()
 
 # Global agent instance that can be updated with model changes
 current_agent = None
-current_model = "claude-3.5-haiku"  # Updated default model
+current_model = "gpt-4o-mini"  # Updated default model - reliable OpenAI model
 
 
 def add_message(history: List[Dict], message: Dict) -> tuple:
@@ -1084,7 +1084,7 @@ with gr.Blocks(
             
             # Hidden components to manage selection
             selected_model = gr.Textbox(
-                value="claude-3.5-haiku",
+                value="gpt-4o-mini",
                 visible=False,
                 label="Selected Model"
             )
@@ -1100,9 +1100,9 @@ with gr.Blocks(
     
     # Model information display
     model_info_display = gr.Markdown(
-        value=f"""🔵 **Current Model:** `claude-3.5-haiku`
+        value=f"""� **Current Model:** `gpt-4o-mini`
 
-💡 **Description:** {FitnessAgent.get_model_info('claude-3.5-haiku')}
+💡 **Description:** {FitnessAgent.get_model_info('gpt-4o-mini')}
 
 📊 **Status:** Ready to chat!""",
         visible=True,
@@ -1202,7 +1202,7 @@ with gr.Blocks(
         | claude-4-sonnet | ★★★★☆ | ★★★★☆ | ★★★★☆ | Balanced high performance |
         | claude-3.7-sonnet | ★★★★☆ | ★★★★☆ | ★★★☆☆ | Extended thinking, complex tasks |
         | claude-3.5-sonnet | ★★★★☆ | ★★★★☆ | ★★★☆☆ | General use, balanced |
-        | claude-3.5-haiku | ★★★☆☆ | ★★★★★ | ★★☆☆☆ | **DEFAULT** - Fast responses |
+        | claude-3.5-haiku | ★★★☆☆ | ★★★★★ | ★★☆☆☆ | Fast responses |
         | claude-3-haiku | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Most cost-effective |
         
         ## 🟢 OpenAI GPT Models
@@ -1210,7 +1210,7 @@ with gr.Blocks(
         | Model | Capability | Speed | Cost | Best For |
         |-------|------------|--------|------|----------|
         | gpt-4o | ★★★★★ | ★★★★☆ | ★★★★☆ | Latest features, vision support |
-        | gpt-4o-mini | ★★★★☆ | ★★★★★ | ★★☆☆☆ | Balanced performance, affordable |
+        | gpt-4o-mini | ★★★★☆ | ★★★★★ | ★★☆☆☆ | **DEFAULT** - Balanced performance, affordable |
         | gpt-4-turbo | ★★★★☆ | ★★★★☆ | ★★★★☆ | Large context, reliable |
         | gpt-3.5-turbo | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Fast and economical |
         | o1-preview | ★★★★★ | ★★☆☆☆ | ★★★★★ | Advanced reasoning |

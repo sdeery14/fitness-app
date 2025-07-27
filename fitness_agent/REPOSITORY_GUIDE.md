@@ -12,7 +12,6 @@
 
 ### Examples & Testing
 - **`examples.py`** - Code examples showing different ways to use the agent
-- **`test_updated_models.py`** - Test script to verify model availability
 
 ### Configuration
 - **`pyproject.toml`** - Python project configuration with dependencies
@@ -29,7 +28,6 @@
 
 - **Model questions**: See `COMPLETE_MODEL_GUIDE.md`
 - **Usage examples**: Run `examples.py`
-- **Test setup**: Run `test_updated_models.py`
 
 ---
 

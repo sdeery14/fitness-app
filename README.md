@@ -1,6 +1,11 @@
 ---
-title: Fitness AI Assistant
-emoji: 🏋️‍♀️
+title: Fitness AI Assis### 🟢 OpenAI GPT Models (Default - Fully Working)
+- **GPT-4o**: gpt-4o, gpt-4o-mini (Latest with vision)
+- **GPT-4**: gpt-4-turbo (Large context window)
+- **GPT-3.5**: gpt-3.5-turbo (Fast and economical)
+- **Reasoning**: o1-preview, o1-mini, o3-mini (Advanced reasoning)
+
+### 🔵 Anthropic Claude Models (Available with LiteLLM)moji: 🏋️‍♀️
 colorFrom: blue
 colorTo: green
 sdk: gradio
@@ -12,7 +17,7 @@ license: mit
 
 # 🏋️‍♀️ Fitness AI Assistant
 
-Your personal fitness companion for workout plans, meal planning, and fitness guidance powered by **multiple AI providers** - choose between Anthropic Claude and OpenAI GPT models!
+Your personal fitness companion for workout plans, meal planning, and fitness guidance powered by **multiple AI providers** - with reliable OpenAI GPT models as default and Anthropic Claude support!
 
 ## ✨ Features
 
@@ -26,17 +31,19 @@ Your personal fitness companion for workout plans, meal planning, and fitness gu
 
 ## 🤖 Supported AI Models
 
-### 🔵 Anthropic Claude Models
+### � OpenAI GPT Models (Fully Working)
+- **GPT-4o**: gpt-4o, gpt-4o-mini (Latest with vision)
+- **GPT-4**: gpt-4-turbo (Large context window)
+- **GPT-3.5**: gpt-3.5-turbo (Fast and economical)
+- **Reasoning**: o1-preview, o1-mini, o3-mini (Advanced reasoning)
+
+### �🔵 Anthropic Claude Models (Configuration Available)
 - **Claude-4**: claude-4-opus, claude-4-sonnet (Premium, most capable)
 - **Claude-3.7**: claude-3.7-sonnet (Extended thinking)
 - **Claude-3.5**: claude-3.5-sonnet, claude-3.5-haiku (Balanced, fast)
 - **Claude-3**: claude-3-haiku (Cost-effective)
 
-### 🟢 OpenAI GPT Models  
-- **GPT-4o**: gpt-4o, gpt-4o-mini (Latest with vision)
-- **GPT-4**: gpt-4-turbo (Large context window)
-- **GPT-3.5**: gpt-3.5-turbo (Fast and economical)
-- **Reasoning**: o1-preview, o1-mini, o3-mini (Advanced reasoning)
+*Note: OpenAI models are the default and work out-of-the-box. Anthropic models are supported via LiteLLM integration.*
 
 ## 🚀 Quick Start
 
@@ -49,22 +56,21 @@ cd fitness-app
 # Install dependencies
 pip install -r requirements.txt
 
-# Set up environment - choose your provider(s)
+# Set up environment
 cp .env.example .env
 
 # Edit .env and add your API key(s):
-# For OpenAI models: OPENAI_API_KEY=your_openai_key_here
-# For Anthropic models: ANTHROPIC_API_KEY=your_anthropic_key_here  
-# For both providers: Set both keys!
+# OPENAI_API_KEY=your_openai_key_here (Required for OpenAI models)
+# ANTHROPIC_API_KEY=your_anthropic_key_here (Optional, for Anthropic models)
 
 # Launch the app
 python fitness_agent/app.py
 ```
 
 ### Option 2: Use the Interface
-1. **Select your AI provider and model** from the dropdown
-   - 🔵 Anthropic models for detailed analysis and safety
-   - 🟢 OpenAI models for familiar interface and vision capabilities
+1. **Select your AI model** from the dropdown
+   - � OpenAI models are ready to use (recommended)
+   - � Anthropic models available but require additional setup
 2. **Start chatting** about your fitness goals
 3. **Be specific** about your level, equipment, and preferences
 4. **Get personalized plans** and ask follow-up questions
@@ -79,25 +85,25 @@ python fitness_agent/app.py
 
 ## 🤖 AI Model Options
 
-| Model | Speed | Capability | Best For |
-|-------|--------|------------|----------|
-| claude-3.5-haiku | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | Quick questions, cost-effective (default) |
-| claude-3.5-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Balanced performance, recommended |
-| claude-3.7-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Extended thinking, complex plans |
-| claude-4-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | High performance (premium) |
-| claude-4-opus | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Maximum capability (premium) |
+| Model | Speed | Capability | Cost | Best For |
+|-------|--------|------------|------|----------|
+| gpt-4o-mini | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | Balanced performance (recommended) |
+| gpt-4o | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Latest features with vision |
+| gpt-3.5-turbo | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | Quick questions, cost-effective |
+| gpt-4-turbo | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Large context, reliable |
+| o1-mini | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Advanced reasoning tasks |
 
 ## 📚 Documentation
 
 - **[Complete Model Guide](fitness_agent/COMPLETE_MODEL_GUIDE.md)** - Everything about AI models
 - **[Examples](fitness_agent/examples.py)** - Code examples for different use cases
-- **[Test Script](fitness_agent/test_updated_models.py)** - Test model availability
+- **[Repository Guide](fitness_agent/REPOSITORY_GUIDE.md)** - Development information
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python, LiteLLM, Anthropic API
+- **Backend**: Python, LiteLLM, OpenAI API, Anthropic API
 - **Frontend**: Gradio
-- **AI Models**: Anthropic Claude (3.5-Haiku to 4-Opus)
+- **AI Models**: OpenAI GPT (working), Anthropic Claude (configured)
 - **Features**: Real-time streaming, conversation memory, model switching
 
 ---
