@@ -66,6 +66,144 @@ class ConversationManager:
         return f"Conversation has {len(self.conversation_history)} messages"
 
 
+def get_or_create_agent(model_name: str = None) -> FitnessAgent:
+    """
+    Get the current agent or create a new one with the specified model
+    
+    Args:
+        model_name: Name of the Anthropic model to use
+        
+    Returns:
+        FitnessAgent instance
+    """
+    global current_agent, current_model
+    
+    # Use default if no model specified
+    if model_name is None:
+        model_name = current_model
+    
+    # Create new agent if model changed or no agent exists
+    if current_agent is None or current_model != model_name:
+        logger.info(f"Creating new agent with model: {model_name}")
+        current_agent = FitnessAgent(model_name)
+        current_model = model_name
+    
+    return current_agent
+
+
+def change_model(new_model: str) -> str:
+    """
+    Change the current model and reset the agent
+    
+    Args:
+        new_model: New model to use
+        
+    Returns:
+        Status message
+    """
+    global current_agent, current_model
+    
+    try:
+        # Validate model exists in our supported list
+        available_models = FitnessAgent.list_supported_models()
+        is_valid, validation_message = FitnessAgent.validate_model_name(new_model)
+        
+        if not is_valid:
+            return f"❌ **Model Validation Failed**\n\n{validation_message}"
+        
+        # Test if we can create an agent with this model (basic validation)
+        try:
+            test_agent = FitnessAgent(new_model)
+            # If we get here, the model is likely available
+        except Exception as model_error:
+            # Check if it's a "not found" error specifically
+            error_str = str(model_error)
+            if "not_found_error" in error_str or "NotFoundError" in error_str:
+                recommended = ", ".join(FitnessAgent.get_recommended_models())
+                return f"""❌ **Model Not Available**
+
+🚫 **Error:** Model `{new_model}` is not currently available on your Anthropic API account.
+
+💡 **This could mean:**
+- The model requires special access or higher tier subscription
+- The model has been deprecated
+- The model name is incorrect
+
+🎯 **Try these recommended models instead:**
+{recommended}
+
+🔧 **Current Model:** `{current_model}` (unchanged)"""
+            else:
+                return f"""❌ **Model Error**
+
+🚫 **Error:** Failed to initialize model `{new_model}`
+
+📝 **Details:** {str(model_error)}
+
+🔧 **Current Model:** `{current_model}` (unchanged)"""
+        
+        # Reset agent to force recreation with new model
+        current_agent = None
+        current_model = new_model
+        
+        # Get model info for user feedback
+        model_info = FitnessAgent.get_model_info(new_model)
+        
+        logger.info(f"Model changed to: {new_model}")
+        return f"""✅ **Model Successfully Changed!**
+
+🤖 **Current Model:** `{new_model}`
+
+💡 **Description:** {model_info}
+
+🔄 **Status:** Ready to chat with the new model. Your conversation history is preserved."""
+        
+    except Exception as e:
+        logger.error(f"Error changing model: {str(e)}")
+        return f"❌ **Unexpected Error:** {str(e)}"
+
+
+def update_model_and_display(selected_model: str) -> str:
+    """
+    Update both the model and the display when dropdown selection changes
+    
+    Args:
+        selected_model: Selected model from dropdown
+        
+    Returns:
+        Formatted model information
+    """
+    # Ignore separator selections
+    if selected_model == "--- Legacy/Experimental ---":
+        return """⚠️ **Please select a specific model**
+
+The separator "--- Legacy/Experimental ---" is not a valid model choice.
+
+Please choose one of the actual model names from the dropdown."""
+    
+    # Update the actual model
+    change_result = change_model(selected_model)
+    
+    # If the change was successful, return success message, otherwise return the error
+    if "✅" in change_result:
+        try:
+            model_info = FitnessAgent.get_model_info(selected_model)
+            return f"""🤖 **Current Model:** `{selected_model}`
+
+💡 **Description:** {model_info}
+
+📊 **Status:** Model updated and ready to chat!"""
+        except Exception as e:
+            return f"""🤖 **Current Model:** `{selected_model}`
+
+❌ *Model information not available*
+
+📊 **Status:** Ready to chat!"""
+    else:
+        # Return the error message from change_model
+        return change_result
+
+
 def print_like_dislike(x: gr.LikeData) -> None:
     """Log user feedback on messages"""
     logger.info(f"User feedback - Index: {x.index}, Value: {x.value}, Liked: {x.liked}")
@@ -73,6 +211,10 @@ def print_like_dislike(x: gr.LikeData) -> None:
 
 # Global conversation manager instance
 conversation_manager = ConversationManager()
+
+# Global agent instance that can be updated with model changes
+current_agent = None
+current_model = "claude-3.5-haiku"  # Updated default model
 
 
 def add_message(history: List[Dict], message: Dict) -> tuple:
@@ -530,23 +672,24 @@ def stream_response(response: str, history: List[Dict], chunk_size: int = 3) -> 
         yield history
 
 
-def bot_with_real_streaming(history: List[Dict]) -> Generator[List[Dict], None, None]:
+def bot_with_real_streaming(history: List[Dict], model_name: str = None) -> Generator[List[Dict], None, None]:
     """
     Bot function with real-time streaming from the agent using Runner.run_streamed
     
     Args:
         history: Current Gradio chat history (for display only)
+        model_name: Model to use for the agent
         
     Yields:
         Updated history with real-time streaming response
     """
     try:
-        # Create agent instance
-        agent = FitnessAgent()
+        # Get agent instance with specified model
+        agent = get_or_create_agent(model_name)
         
         # Get input for agent from conversation manager
         agent_input = conversation_manager.get_input_for_agent()
-        logger.info(f"Sending to agent: {type(agent_input)} - {conversation_manager.get_history_summary()}")
+        logger.info(f"Sending to agent ({current_model}): {type(agent_input)} - {conversation_manager.get_history_summary()}")
         
         # Add empty assistant message for streaming
         history.append({"role": "assistant", "content": ""})
@@ -660,23 +803,24 @@ def bot_with_real_streaming(history: List[Dict]) -> Generator[List[Dict], None, 
         yield history
 
 
-def bot(history: List[Dict]) -> Generator[List[Dict], None, None]:
+def bot(history: List[Dict], model_name: str = None) -> Generator[List[Dict], None, None]:
     """
     Main bot function with comprehensive error handling and improved UX using manual conversation management
     
     Args:
         history: Current Gradio chat history (for display only)
+        model_name: Model to use for the agent
         
     Yields:
         Updated history with bot response
     """
     try:
-        # Create agent instance
-        agent = FitnessAgent()
+        # Get agent instance with specified model
+        agent = get_or_create_agent(model_name)
         
         # Get input for agent from conversation manager
         agent_input = conversation_manager.get_input_for_agent()
-        logger.info(f"Sending to agent: {type(agent_input)} - {conversation_manager.get_history_summary()}")
+        logger.info(f"Sending to agent ({current_model}): {type(agent_input)} - {conversation_manager.get_history_summary()}")
         
         # Run agent safely with sync wrapper
         result = run_agent_safely_sync(agent, agent_input)
@@ -697,23 +841,24 @@ def bot(history: List[Dict]) -> Generator[List[Dict], None, None]:
         yield from stream_response(error_response, history)
 
 
-def dynamic_bot(history: List[Dict], use_real_streaming: bool = True) -> Generator[List[Dict], None, None]:
+def dynamic_bot(history: List[Dict], use_real_streaming: bool = True, model_name: str = None) -> Generator[List[Dict], None, None]:
     """
     Dynamic bot function that can switch between streaming modes
     
     Args:
         history: Current Gradio chat history (for display only)
         use_real_streaming: Whether to use real-time streaming from agent
+        model_name: Model to use for the agent
         
     Yields:
         Updated history with bot response
     """
     if use_real_streaming:
         logger.info("Using real-time streaming mode")
-        yield from bot_with_real_streaming(history)
+        yield from bot_with_real_streaming(history, model_name)
     else:
         logger.info("Using simulated streaming mode")
-        yield from bot(history)
+        yield from bot(history, model_name)
 
 
 def clear_conversation() -> List[Dict]:
@@ -740,6 +885,49 @@ with gr.Blocks(
     #chatbot {
         height: 600px;
     }
+    .model-info {
+        background: linear-gradient(135deg, rgba(55, 65, 81, 0.9), rgba(75, 85, 99, 0.7)) !important;
+        color: #e5e7eb !important;
+        padding: 16px !important;
+        border-radius: 12px !important;
+        border-left: 4px solid #10b981 !important;
+        margin: 12px 0 !important;
+        border: 1px solid rgba(75, 85, 99, 0.4) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    .model-info p {
+        color: #e5e7eb !important;
+        margin: 8px 0 !important;
+        line-height: 1.5 !important;
+    }
+    .model-info strong {
+        color: #f9fafb !important;
+        font-weight: 600 !important;
+    }
+    .model-info em {
+        color: #d1d5db !important;
+        font-style: italic;
+    }
+    .model-info code {
+        background-color: rgba(31, 41, 55, 0.8) !important;
+        color: #10b981 !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+        font-size: 0.9em !important;
+    }
+    .model-dropdown {
+        font-weight: bold;
+    }
+    /* Ensure all text in model-info respects dark theme */
+    .model-info * {
+        color: inherit !important;
+    }
+    /* Fix for any remaining white background issues */
+    .model-info .prose {
+        color: #e5e7eb !important;
+    }
     """
 ) as demo:
     
@@ -751,7 +939,39 @@ with gr.Blocks(
     - Be specific about your fitness goals
     - Mention any physical limitations or preferences
     - Ask for modifications if needed
+    - Choose your preferred AI model for different capabilities
     """)
+    
+    # Model selection section
+    with gr.Row():
+        with gr.Column(scale=1):
+            # Get available models for dropdown - prioritize recommended models
+            all_models = FitnessAgent.list_supported_models()
+            recommended_models = FitnessAgent.get_recommended_models()
+            
+            # Create choices list with recommended models first, then others
+            other_models = [m for m in all_models.keys() if m not in recommended_models]
+            model_choices = recommended_models + ["--- Legacy/Experimental ---"] + other_models
+            
+            model_dropdown = gr.Dropdown(
+                choices=model_choices,
+                value="claude-3.5-haiku",  # Updated default model
+                label="🤖 AI Model",
+                info="Choose which Anthropic model to use (recommended models listed first)",
+                interactive=True,
+                elem_classes=["model-dropdown"]
+            )
+    
+    # Model information display
+    model_info_display = gr.Markdown(
+        value=f"""🤖 **Current Model:** `claude-3.5-haiku`
+
+💡 **Description:** {FitnessAgent.get_model_info('claude-3.5-haiku')}
+
+📊 **Status:** Ready to chat!""",
+        visible=True,
+        elem_classes=["model-info"]
+    )
     
     chatbot = gr.Chatbot(
         elem_id="chatbot", 
@@ -811,6 +1031,13 @@ with gr.Blocks(
         - Include any equipment you have access to
         - Let me know about any injuries or limitations
         
+        **AI Model Selection:**
+        - **Claude-4 Models**: Most capable, best for complex reasoning and detailed plans (higher cost)
+        - **Claude-3.5/3.7**: Excellent balance of capability and speed (recommended for most users)
+        - **Claude-3 Haiku**: Fastest and most cost-effective (good for simple questions)
+        - **Claude-2/Instant**: Previous generation models (basic functionality)
+        - You can change models anytime - the conversation continues seamlessly
+        
         **Conversation Management:**
         - The assistant remembers our entire conversation
         - You can refer back to previous plans or discussions
@@ -824,13 +1051,46 @@ with gr.Blocks(
         - Real-time streaming shows tool calls, outputs, and message generation in real-time
         - **Note**: Anthropic models automatically fall back to non-streaming if validation errors occur
         """)
+    
+    # Add model comparison section
+    with gr.Accordion("🤖 Model Comparison Guide", open=False):
+        model_comparison = "| Model | Capability | Speed | Cost | Best For |\n"
+        model_comparison += "|-------|------------|--------|------|----------|\n"
+        
+        models_info = {
+            "claude-4-opus": ("★★★★★", "★★★☆☆", "★★★★★", "Complex analysis, detailed plans"),
+            "claude-4-sonnet": ("★★★★☆", "★★★★☆", "★★★★☆", "Balanced performance"),
+            "claude-3.7-sonnet": ("★★★★☆", "★★★★☆", "★★★☆☆", "Enhanced capabilities"),
+            "claude-3.5-sonnet": ("★★★★☆", "★★★★☆", "★★★☆☆", "General use, balanced"),
+            "claude-3-opus": ("★★★★☆", "★★★☆☆", "★★★★☆", "Complex tasks"),
+            "claude-3-sonnet": ("★★★☆☆", "★★★★☆", "★★★☆☆", "Standard tasks"),
+            "claude-3-haiku": ("★★★☆☆", "★★★★★", "★★☆☆☆", "Quick questions, cost-effective"),
+            "claude-2.1": ("★★☆☆☆", "★★★★☆", "★★☆☆☆", "Basic functionality"),
+        }
+        
+        for model, (capability, speed, cost, best_for) in models_info.items():
+            model_comparison += f"| {model} | {capability} | {speed} | {cost} | {best_for} |\n"
+        
+        gr.Markdown(model_comparison)
 
     # Event handlers
     chat_msg = chat_input.submit(
         add_message, [chatbot, chat_input], [chatbot, chat_input]
     )
-    bot_msg = chat_msg.then(dynamic_bot, [chatbot, streaming_toggle], chatbot, api_name="bot_response")
+    bot_msg = chat_msg.then(
+        dynamic_bot, 
+        [chatbot, streaming_toggle, model_dropdown], 
+        chatbot, 
+        api_name="bot_response"
+    )
     bot_msg.then(lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input])
+
+    # Update model and display when dropdown selection changes
+    model_dropdown.change(
+        update_model_and_display,
+        inputs=[model_dropdown],
+        outputs=[model_info_display]
+    )
 
     # Clear conversation handler
     clear_btn.click(clear_conversation, None, chatbot)
