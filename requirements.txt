@@ -1,4 +1,3 @@
-gradio
 openai-agents[litellm]
 python-dotenv
 pydantic
@@ -8,4 +7,4 @@ numpy
 fastapi
 aiofiles
 requests
-spaces
+mcp==1.12.2
