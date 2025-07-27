@@ -1,0 +1,89 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        lfs: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install huggingface_hub
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Test app locally (optional)
+      run: |
+        echo "Running basic import test..."
+        python -c "
+        import sys
+        import os
+        sys.path.insert(0, 'fitness_agent')
+        try:
+            from fitness_agent import FitnessAgent
+            print('✓ FitnessAgent import successful')
+        except Exception as e:
+            print(f'⚠ Warning: {e}')
+        "
+      continue-on-error: true
+
+    - name: Deploy to Hugging Face Spaces
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+      run: |
+        # Configure git for Hugging Face
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        
+        # Clone the Hugging Face Space repository
+        echo "Cloning Hugging Face Space..."
+        git clone https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME hf-space
+        
+        # Copy files to the HF space directory (excluding .git)
+        echo "Copying files to Hugging Face Space..."
+        rsync -av --exclude='.git' --exclude='hf-space' --exclude='.github' --exclude='__pycache__' --exclude='setup-github-actions.*' --exclude='space_config.yaml' . hf-space/
+        
+        # Navigate to HF space directory
+        cd hf-space
+        
+        # Check if there are changes to commit
+        if git diff --quiet && git diff --staged --quiet; then
+          echo "No changes to deploy"
+          exit 0
+        fi
+        
+        # Add all changes
+        git add .
+        
+        # Commit with meaningful message
+        COMMIT_MSG="Auto-deploy from GitHub: $(git log --oneline -1 $GITHUB_SHA | cut -d' ' -f2-)"
+        git commit -m "$COMMIT_MSG" || echo "No changes to commit"
+        
+        # Push to Hugging Face
+        echo "Pushing to Hugging Face Spaces..."
+        git push https://user:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME main
+
+    - name: Deployment Status
+      run: |
+        echo "🚀 Deployment completed!"
+        echo "Your app should be available at: https://huggingface.co/spaces/${{ secrets.HF_USERNAME }}/${{ secrets.HF_SPACE_NAME }}"

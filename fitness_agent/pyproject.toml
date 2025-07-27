@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.12"
 openai-agents = {extras = ["litellm"], version = "^0.2.3"}
 python-dotenv = "^1.1.1"
+reportlab = "^4.4.3"
+gradio = "^5.38.1"
 
 
 [build-system]
