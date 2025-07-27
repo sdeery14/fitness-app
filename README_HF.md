@@ -1,3 +1,15 @@
+---
+title: Fitness AI Assistant
+emoji: 💪
+colorFrom: blue
+colorTo: green
+sdk: gradio
+sdk_version: "5.38.1"
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # Fitness AI Assistant
 
 Your personal AI-powered fitness and nutrition coach built with Gradio.
