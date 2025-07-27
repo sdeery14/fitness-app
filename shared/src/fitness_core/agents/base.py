@@ -53,23 +53,114 @@ class FitnessAgent(Agent):
         self.provider = ModelProvider.get_provider(resolved_model_name, self.full_model_name)
         self.config = config
 
-        # Create fitness plan agent
-        fitness_plan_agent = Agent(
-            name="Fitness Plan Assistant",
-            instructions="You are a helpful assistant for creating personalized fitness plans.",
-            model=final_model,
-            output_type=FitnessPlan
-        )
+        # Create fitness plan agent with model-specific configuration
+        # Check if this is a Groq model that might struggle with structured output
+        is_groq_model = "groq" in final_model.lower() or resolved_model_name in [
+            "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-8b-8192", 
+            "llama3-70b-8192", "gemma2-9b-it", 
+            "mixtral-8x7b-32768", "qwen3-32b", "kimi-k2-instruct"
+        ]
+        
+        if is_groq_model:
+            # For Groq models, use simpler instructions without strict structured output
+            fitness_plan_agent = Agent(
+                name="Fitness Plan Assistant",
+                instructions="""You are an expert fitness plan creation specialist. Create detailed fitness plans.
 
-        # Initialize parent Agent
+IMPORTANT: Respond directly with the fitness plan. Do not use <think> tags or internal reasoning. 
+
+When responding, always provide:
+1. A clear plan name
+2. A complete training plan with specific exercises, sets, and reps
+3. A detailed meal plan with specific foods and portions
+
+Format your response clearly and include all three components above. Be specific and actionable.
+
+Example response format:
+**Plan Name:** Intermediate Muscle Building Program
+
+**Training Plan:**
+Day 1: Upper Body
+- Bench Press: 4 sets × 8-10 reps
+- Pull-ups: 3 sets × 6-8 reps
+- Overhead Press: 3 sets × 10-12 reps
+
+Day 2: Lower Body
+- Squats: 4 sets × 8-10 reps
+- Deadlifts: 3 sets × 5-6 reps
+
+**Meal Plan:**
+Breakfast: 3 whole eggs + 2 egg whites, 1 cup oatmeal, 1 banana
+Lunch: 6oz chicken breast, 1.5 cups brown rice, mixed vegetables
+Dinner: 6oz salmon, 1 cup quinoa, steamed broccoli
+
+Now create a comprehensive fitness plan based on the user's request.""",
+                model=final_model
+                # Note: No output_type for Groq models to avoid structured output issues
+            )
+        else:
+            # For OpenAI and Anthropic models, use structured output
+            fitness_plan_agent = Agent(
+                name="Fitness Plan Assistant",
+                instructions="""You are an expert fitness plan creation specialist. Create detailed fitness plans with the following structure:
+
+CRITICAL: You must respond with a valid FitnessPlan object containing exactly these three fields:
+- name: A descriptive title for the plan
+- training_plan: Complete workout program with exercises, sets, and reps  
+- meal_plan: Detailed nutrition plan with specific foods and portions
+
+TRAINING PLAN REQUIREMENTS:
+- Organize by days (Day 1, Day 2, etc.) or muscle groups
+- Include specific exercises with sets × reps (e.g., "Push-ups: 3 sets × 10 reps")
+- Mention rest periods and progression tips
+- Consider the user's fitness level and available equipment
+
+MEAL PLAN REQUIREMENTS:
+- Provide specific meals for breakfast, lunch, dinner, and snacks
+- Include portion sizes and macronutrient balance
+- Consider the user's goals (muscle gain, weight loss, etc.)
+- Make it practical and achievable
+
+IMPORTANT: Always fill in ALL three fields (name, training_plan, meal_plan) with detailed, specific content. Never leave any field empty or use placeholder text.
+
+Example format:
+- name: "Intermediate Muscle Building Program"
+- training_plan: "Day 1: Upper Body\n- Bench Press: 4 sets × 8-10 reps\n- Pull-ups: 3 sets × 6-8 reps\n\nDay 2: Lower Body\n- Squats: 4 sets × 8-10 reps"
+- meal_plan: "Breakfast: 3 whole eggs + 2 egg whites, 1 cup oatmeal, 1 banana\nLunch: 6oz chicken breast, 1.5 cups brown rice"
+
+Now create a comprehensive fitness plan based on the user's request.""",
+                model=final_model,
+                output_type=FitnessPlan
+            )
+
+        # Initialize parent Agent with improved instructions
         super().__init__(
             name="Fitness Assistant",
             model=final_model,
-            instructions="""
-            You are a helpful assistant for fitness-related queries.
-            
-            If the user wants to create a fitness plan, hand them off to the Fitness Plan Assistant.
-            """,
+            instructions="""You are a professional fitness and nutrition assistant with expertise in creating personalized fitness programs.
+
+CORE CAPABILITIES:
+- Fitness program design and workout planning
+- Nutrition guidance and meal planning  
+- Exercise technique and form advice
+- Goal setting and progress tracking
+- Injury prevention and modification strategies
+
+WHEN TO TRANSFER TO FITNESS PLAN ASSISTANT:
+Transfer immediately when users request:
+- "Create a workout plan" or "design a program"
+- "I need a fitness plan" or "help me with a routine"
+- "Build a meal plan" or nutrition planning
+- Any structured fitness or nutrition program creation
+
+CONVERSATION GUIDELINES:
+- Be encouraging and supportive
+- Ask clarifying questions about fitness level, goals, and preferences
+- Provide evidence-based advice
+- Consider individual limitations and equipment availability
+- Always prioritize safety and proper form
+
+For detailed fitness plan creation, immediately transfer to the Fitness Plan Assistant who will create comprehensive, structured programs.""",
             handoffs=[fitness_plan_agent]
         )
 

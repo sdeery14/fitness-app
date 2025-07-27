@@ -140,15 +140,57 @@ MODEL_COMPARISON_CONTENT = """
 | o1-mini | ★★★★☆ | ★★★☆☆ | ★★★☆☆ | Reasoning tasks |
 | o3-mini | ★★★★☆ | ★★★★☆ | ★★★☆☆ | Latest reasoning model |
 
+## 🚀 Groq Models (Fast & Free)
+
+| Model | Capability | Speed | Cost | Best For | Complex Tasks |
+|-------|------------|--------|------|----------|---------------|
+| llama-3.3-70b-versatile | ★★★★☆ | ★★★★★ | ★☆☆☆☆ | Balanced performance | ✅ Excellent |
+| mixtral-8x7b-32768 | ★★★★☆ | ★★★★★ | ★☆☆☆☆ | Structured output | ✅ Excellent |
+| llama3-70b-8192 | ★★★★☆ | ★★★★★ | ★☆☆☆☆ | General tasks | ✅ Good |
+| qwen3-32b | ★★★★☆ | ★★★★★ | ★☆☆☆☆ | Code and analysis | ✅ Good |
+| kimi-k2-instruct | ★★★★☆ | ★★★★★ | ★★☆☆☆ | Instruction following | ✅ Good |
+| gemma2-9b-it | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Light tasks | ⚠️ Limited |
+| llama-3.1-8b-instant | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Quick responses | ⚠️ Limited |
+| llama3-8b-8192 | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Basic tasks | ⚠️ Limited |
+| gemma-7b-it | ★★☆☆☆ | ★★★★★ | ★☆☆☆☆ | Simple queries | ❌ Basic Only |
+| llama2-70b-4096 | ★★★☆☆ | ★★★★☆ | ★☆☆☆☆ | Legacy support | ⚠️ Limited |
+
 ### 💡 Provider Comparison
 - **🔵 Anthropic**: Excellent for detailed analysis, safety-focused, great for complex fitness planning
 - **🟢 OpenAI**: Familiar interface, good general performance, strong tool usage
+- **🚀 Groq**: Ultra-fast inference, free to use, varying complexity handling
+
+### ⚠️ Model Capability Warnings for Fitness Plan Creation
+
+**✅ EXCELLENT for Complex Fitness Plans:**
+- claude-4-opus, claude-4-sonnet, claude-3.7-sonnet, claude-3.5-sonnet
+- gpt-4o, gpt-4-turbo, o1-preview, o1-mini, o3-mini
+- llama-3.3-70b-versatile, mixtral-8x7b-32768
+
+**✅ GOOD for Fitness Plans (may need more specific prompting):**
+- claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo
+- llama3-70b-8192, qwen3-32b, kimi-k2-instruct
+
+**⚠️ LIMITED for Complex Plans (basic guidance only):**
+- claude-3-haiku
+- gemma2-9b-it, llama-3.1-8b-instant, llama3-8b-8192, llama2-70b-4096
+
+**❌ NOT RECOMMENDED for Detailed Fitness Plans:**
+- gemma-7b-it (may produce incomplete or empty plans)
 
 ### 🎯 Recommendations by Use Case
-- **Quick questions**: claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo
-- **Comprehensive plans**: claude-3.5-sonnet, gpt-4o, claude-3.7-sonnet
+- **Quick questions**: claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo, any Groq model
+- **Comprehensive fitness plans**: claude-3.5-sonnet+, gpt-4o+, llama-3.3-70b-versatile, mixtral-8x7b-32768
 - **Complex analysis**: claude-4-opus, gpt-4o, o1-preview
 - **Budget-conscious**: claude-3-haiku, gpt-3.5-turbo, gpt-4o-mini
+- **Speed priority**: Any Groq model, claude-3.5-haiku, gpt-4o-mini
+
+### 🔧 Troubleshooting Complex Tasks
+If you experience **empty or incomplete fitness plans** with smaller models:
+1. Switch to a higher-capability model (marked as ✅ Excellent above)
+2. Be more specific in your requests
+3. Try models like `mixtral-8x7b-32768` which excel at structured output
+4. For Groq models, `llama-3.3-70b-versatile` provides the best results
 """
 
 # Example prompts for the Examples component

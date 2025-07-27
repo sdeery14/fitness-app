@@ -29,7 +29,16 @@ class ResponseFormatter:
                     hasattr(plan_obj, 'meal_plan')):
                 # Try to parse as string if it's not a proper object
                 if isinstance(plan_obj, str):
-                    return ResponseFormatter.parse_fitness_plan_from_string(plan_obj)
+                    # First try to parse as markdown-formatted plan (for Groq models)
+                    parsed_plan = ResponseFormatter.parse_markdown_fitness_plan(plan_obj)
+                    if parsed_plan:
+                        return parsed_plan
+                    # Fallback to original string parsing
+                    parsed_plan = ResponseFormatter.parse_fitness_plan_from_string(plan_obj)
+                    if parsed_plan and "**Fitness Plan**" not in parsed_plan[:50]:
+                        return parsed_plan
+                    # CATCH-ALL: If all parsing fails, display the raw content formatted nicely
+                    return ResponseFormatter.format_raw_fitness_content(plan_obj)
                 else:
                     return f"**Fitness Plan**\n\n{str(plan_obj)}"
             
@@ -139,6 +148,120 @@ class ResponseFormatter:
             logger.error(f"Error parsing fitness plan from string: {str(e)}")
             # Fallback to basic formatting
             return f"**Fitness Plan**\n\n{plan_str}"
+
+    @staticmethod
+    def parse_markdown_fitness_plan(plan_str: str) -> str:
+        """
+        Parse a markdown-formatted fitness plan (for Groq models)
+        
+        Args:
+            plan_str: Markdown-formatted fitness plan string
+            
+        Returns:
+            Formatted markdown string or None if parsing fails
+        """
+        try:
+            # Remove <think> tags if present
+            cleaned_str = re.sub(r'<think>.*?</think>', '', plan_str, flags=re.DOTALL)
+            
+            # Extract plan name
+            name_match = re.search(r'\*\*Plan Name:\*\*\s*(.+?)(?:\n|$)', cleaned_str, re.IGNORECASE)
+            if not name_match:
+                # Try alternative formats
+                name_match = re.search(r'##?\s*(.+?Plan.+?)(?:\n|$)', cleaned_str, re.IGNORECASE)
+                if not name_match:
+                    # Look for any header that might be the plan name
+                    name_match = re.search(r'\*\*(.+?)\*\*', cleaned_str)
+            
+            name = name_match.group(1).strip() if name_match else "Custom Fitness Plan"
+            
+            # Extract training plan section
+            training_match = re.search(r'\*\*Training Plan:?\*\*\s*(.*?)(?=\*\*Meal Plan|\*\*\s*Meal|$)', cleaned_str, re.DOTALL | re.IGNORECASE)
+            if not training_match:
+                # Try alternative headers
+                training_match = re.search(r'##?\s*Training.*?\n(.*?)(?=##?\s*Meal|$)', cleaned_str, re.DOTALL | re.IGNORECASE)
+            
+            training_plan = training_match.group(1).strip() if training_match else ""
+            
+            # Extract meal plan section
+            meal_match = re.search(r'\*\*Meal Plan:?\*\*\s*(.*?)(?=\*\*[^*]|\n\n\*\*|$)', cleaned_str, re.DOTALL | re.IGNORECASE)
+            if not meal_match:
+                # Try alternative headers
+                meal_match = re.search(r'##?\s*Meal.*?\n(.*?)(?=##?|$)', cleaned_str, re.DOTALL | re.IGNORECASE)
+            
+            meal_plan = meal_match.group(1).strip() if meal_match else ""
+            
+            # Only return formatted plan if we found both training and meal sections
+            if training_plan and meal_plan:
+                return f"""# 🏋️ {name}
+
+## 💪 Training Plan
+{training_plan}
+
+## 🥗 Meal Plan
+{meal_plan}
+
+---
+*Your personalized fitness plan is ready! Feel free to ask any questions about the plan or request modifications.*"""
+            
+            # If we couldn't parse properly, return None to try other parsing methods
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error parsing markdown fitness plan: {str(e)}")
+            return None
+
+    @staticmethod
+    def format_raw_fitness_content(content: str) -> str:
+        """
+        CATCH-ALL: Format any fitness content nicely, even if it doesn't follow expected patterns
+        
+        Args:
+            content: Raw content string that might contain fitness plan information
+            
+        Returns:
+            Formatted markdown string with proper headers
+        """
+        try:
+            # Clean up the content
+            cleaned = content.strip()
+            
+            # Remove <think> tags completely
+            cleaned = re.sub(r'<think>.*?</think>', '', cleaned, flags=re.DOTALL)
+            cleaned = cleaned.strip()
+            
+            # If content is empty after cleaning, return a message
+            if not cleaned:
+                return "**Fitness Plan Generated**\n\nI've created a fitness plan for you, but there was an issue displaying it. Please try again or ask me to clarify any specific part of your plan."
+            
+            # If the content already looks formatted (has headers), just clean it up and display
+            if any(marker in cleaned for marker in ['**Plan Name:', '**Training Plan:', '**Meal Plan:', '## ', '# ']):
+                # Add emoji headers if missing
+                if not cleaned.startswith('#'):
+                    cleaned = f"# 🏋️ Your Fitness Plan\n\n{cleaned}"
+                
+                # Ensure proper markdown formatting
+                cleaned = re.sub(r'\*\*Training Plan\*\*', '## 💪 Training Plan', cleaned)
+                cleaned = re.sub(r'\*\*Meal Plan\*\*', '## 🥗 Meal Plan', cleaned)
+                
+                # Add footer
+                if not cleaned.endswith('*'):
+                    cleaned += "\n\n---\n*Your personalized fitness plan is ready! Feel free to ask any questions about the plan or request modifications.*"
+                
+                return cleaned
+            
+            # If no clear structure, add basic formatting
+            return f"""# 🏋️ Your Fitness Plan
+
+{cleaned}
+
+---
+*Your personalized fitness plan is ready! Feel free to ask any questions about the plan or request modifications.*"""
+            
+        except Exception as e:
+            logger.error(f"Error formatting raw fitness content: {str(e)}")
+            # Last resort - just return the content with minimal formatting
+            return f"**Your Fitness Plan**\n\n{content}"
 
     @staticmethod
     def extract_response_content(result: Any) -> str:

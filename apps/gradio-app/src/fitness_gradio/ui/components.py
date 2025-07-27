@@ -38,17 +38,42 @@ class UIComponents:
             # Organize models by provider
             anthropic_models = []
             openai_models = []
+            groq_models = []
             
             for row in table_data:
                 star, provider, model_name, capability, speed, cost, description = row
                 
-                # Create simple display text: model name (provider)
-                provider_short = "Anthropic" if "Anthropic" in provider else "OpenAI"
-                display_text = f"{model_name} ({provider_short})"
-                
+                # Extract provider information and create display text
                 if "Anthropic" in provider:
+                    display_text = f"{model_name} (Anthropic)"
                     anthropic_models.append((display_text, model_name))
-                else:  # OpenAI
+                elif "OpenAI" in provider and "via Groq" not in provider:
+                    display_text = f"{model_name} (OpenAI)"
+                    openai_models.append((display_text, model_name))
+                elif "via Groq" in provider:
+                    # Only include text generation models from Groq (exclude Whisper speech-to-text models)
+                    if model_name.startswith("whisper"):
+                        continue  # Skip Whisper models as they are speech-to-text, not text generation
+                    
+                    # Extract the actual provider (Meta, Google, etc.) from the provider string
+                    if "Meta" in provider:
+                        display_text = f"{model_name} (Meta via Groq)"
+                    elif "Google" in provider:
+                        display_text = f"{model_name} (Google via Groq)"
+                    elif "Mistral" in provider:
+                        display_text = f"{model_name} (Mistral via Groq)"
+                    elif "Alibaba" in provider:
+                        display_text = f"{model_name} (Alibaba via Groq)"
+                    elif "Moonshot" in provider:
+                        display_text = f"{model_name} (Moonshot via Groq)"
+                    elif "OpenAI" in provider:
+                        display_text = f"{model_name} (OpenAI via Groq)"
+                    else:
+                        display_text = f"{model_name} (Groq)"
+                    groq_models.append((display_text, model_name))
+                else:
+                    # Fallback for unknown providers
+                    display_text = f"{model_name} (Unknown)"
                     openai_models.append((display_text, model_name))
             
             # Sort within each provider by model size (largest to smallest)
@@ -72,18 +97,34 @@ class UIComponents:
                 "o1-preview": 5,
                 "o1-mini": 6,
                 "o3-mini": 7,
+                
+                # Groq models (by capability and size - text generation only)
+                "llama-3.3-70b-versatile": 0,
+                "llama3-70b-8192": 1,
+                "mixtral-8x7b-32768": 2,
+                "qwen3-32b": 3,
+                "kimi-k2-instruct": 4,
+                "gemma2-9b-it": 5,
+                "llama-3.1-8b-instant": 6,
+                "llama3-8b-8192": 7,
+                "gemma-7b-it": 8,
+                "llama2-70b-4096": 9,
             }
             
             anthropic_models.sort(key=lambda x: model_order.get(x[1], 999))
             openai_models.sort(key=lambda x: model_order.get(x[1], 999))
+            groq_models.sort(key=lambda x: model_order.get(x[1], 999))
             
-            # Create final dropdown choices without headers
+            # Create final dropdown choices organized by provider
             dropdown_choices = []
             
             # Add Anthropic models first (alphabetically first)
             dropdown_choices.extend(anthropic_models)
             
-            # Add OpenAI models
+            # Add Groq models (fast and cost-effective)
+            dropdown_choices.extend(groq_models)
+            
+            # Add OpenAI models last
             dropdown_choices.extend(openai_models)
             
             # Main model selection dropdown (full width)
