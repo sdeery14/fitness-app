@@ -41,6 +41,18 @@ try:
     print("✓ fitness_core base imports successful")
     
     print("📦 Testing fitness_gradio imports...")
+    try:
+        import scipy
+        print("✓ scipy imported successfully")
+    except ImportError as e:
+        print(f"⚠️ scipy not available - audio processing will be limited: {e}")
+    
+    try:
+        import groq
+        print("✓ groq imported successfully")
+    except ImportError as e:
+        print(f"⚠️ groq not available - voice transcription will be limited: {e}")
+    
     from fitness_gradio.ui import create_fitness_app
     print("✓ fitness_gradio imports successful")
     
