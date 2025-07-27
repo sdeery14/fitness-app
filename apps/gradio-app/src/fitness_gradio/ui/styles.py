@@ -85,11 +85,21 @@ HELP_CONTENT = """
 - Suggest exercises for specific needs
 - Help modify existing plans
 
+**How to interact:**
+- **💬 Type messages** in the text box
+- **🎤 Record voice messages** using the circular microphone button (requires Groq API key)
+- **📎 Upload files** if needed for context
+
 **To get the best results:**
 - Tell me your fitness level (beginner, intermediate, advanced)
 - Mention your goals (weight loss, muscle gain, general fitness)
 - Include any equipment you have access to
 - Let me know about any injuries or limitations
+
+**Voice Input Setup:**
+- Set your `GROQ_API_KEY` environment variable to enable voice transcription
+- Click the circular microphone icon in the input box and speak your message
+- The system will convert your speech to text automatically using Groq's Whisper
 
 **AI Model Selection:**
 - **🔵 Anthropic Claude Models**: Excellent for detailed reasoning and analysis

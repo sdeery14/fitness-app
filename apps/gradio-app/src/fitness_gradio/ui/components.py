@@ -166,7 +166,7 @@ class UIComponents:
             file_count="multiple",
             placeholder="Ask me about fitness, request a workout plan, or get meal planning advice...",
             show_label=False,
-            sources=["microphone", "upload"],
+            sources=["microphone", "upload"],  # Re-enable microphone in multimodal for the circular button
         )
     
     @staticmethod

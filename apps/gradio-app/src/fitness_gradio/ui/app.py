@@ -66,9 +66,9 @@ class FitnessAppUI:
     ) -> None:
         """Set up all event handlers."""
         
-        # Chat message handling
+        # Chat message handling (text/file/audio input)
         chat_msg = chat_input.submit(
-            UIHandlers.add_message, 
+            UIHandlers.add_message_with_audio, 
             [chatbot, chat_input], 
             [chatbot, chat_input]
         )
