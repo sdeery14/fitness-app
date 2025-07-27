@@ -1,10 +1,12 @@
+# Install MCP first to establish the correct version
+mcp>=1.12.2
+
 # Core dependencies for Fitness AI Assistant
 gradio[oauth]>=5.38.2
 openai-agents[litellm]>=0.2.3
 python-dotenv>=1.1.1
 pydantic>=2.0.0
 reportlab>=4.4.3
-mcp>=1.12.2
 
 # Voice input dependencies
 groq>=0.15.0
