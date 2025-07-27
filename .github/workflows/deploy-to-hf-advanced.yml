@@ -75,7 +75,7 @@ jobs:
     - name: Test imports
       run: |
         echo "Testing critical imports..."
-        python test_imports.py
+        python .github/test_imports.py
       continue-on-error: true
 
     - name: Set up Hugging Face CLI
@@ -129,7 +129,6 @@ jobs:
           --exclude='SECURITY_UPDATE.md' \
           --exclude='WORKFLOW_STRATEGY.md' \
           --exclude='setup-github-actions.*' \
-          --exclude='test_imports.py' \
           --exclude='space_config.yaml' \
           --exclude='.pytest_cache' \
           --exclude='tests/' \
