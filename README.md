@@ -1,113 +1,209 @@
----
-title: Fitness AI Assis### 🟢 OpenAI GPT Models (Default - Fully Working)
-- **GPT-4o**: gpt-4o, gpt-4o-mini (Latest with vision)
-- **GPT-4**: gpt-4-turbo (Large context window)
-- **GPT-3.5**: gpt-3.5-turbo (Fast and economical)
-- **Reasoning**: o1-preview, o1-mini, o3-mini (Advanced reasoning)
+# 🏋️ Fitness AI Assistant
 
-### 🔵 Anthropic Claude Models (Available with LiteLLM)moji: 🏋️‍♀️
-colorFrom: blue
-colorTo: green
-sdk: gradio
-sdk_version: 5.38.1
-app_file: fitness_agent/app.py
-pinned: false
-license: mit
----
-
-# 🏋️‍♀️ Fitness AI Assistant
-
-Your personal fitness companion for workout plans, meal planning, and fitness guidance powered by **multiple AI providers** - with reliable OpenAI GPT models as default and Anthropic Claude support!
-
-## ✨ Features
-
-- **🏋️ Personalized Workout Plans**: Custom routines based on your fitness level and goals
-- **🥗 Meal Planning**: Tailored nutrition plans for weight loss, muscle gain, or general health  
-- **💡 Fitness Guidance**: Expert advice on exercises, form, and best practices
-- **🤖 Multiple AI Providers**: Choose from Anthropic Claude OR OpenAI GPT models
-- **⚡ Model Flexibility**: Switch between models anytime for different capabilities
-- **💬 Interactive Chat**: Conversational interface with memory and context
-- **🔄 Real-time Streaming**: See responses generated live
-
-## 🤖 Supported AI Models
-
-### � OpenAI GPT Models (Fully Working)
-- **GPT-4o**: gpt-4o, gpt-4o-mini (Latest with vision)
-- **GPT-4**: gpt-4-turbo (Large context window)
-- **GPT-3.5**: gpt-3.5-turbo (Fast and economical)
-- **Reasoning**: o1-preview, o1-mini, o3-mini (Advanced reasoning)
-
-### �🔵 Anthropic Claude Models (Configuration Available)
-- **Claude-4**: claude-4-opus, claude-4-sonnet (Premium, most capable)
-- **Claude-3.7**: claude-3.7-sonnet (Extended thinking)
-- **Claude-3.5**: claude-3.5-sonnet, claude-3.5-haiku (Balanced, fast)
-- **Claude-3**: claude-3-haiku (Cost-effective)
-
-*Note: OpenAI models are the default and work out-of-the-box. Anthropic models are supported via LiteLLM integration.*
+An AI-powered fitness companion that provides personalized workout plans, meal planning, and fitness guidance using state-of-the-art language models.
 
 ## 🚀 Quick Start
 
-### Option 1: Run Locally
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd fitness-app
+### Prerequisites
+- Python 3.12+
+- Poetry (for dependency management)
+- OpenAI API Key and/or Anthropic API Key
 
-# Install dependencies
-pip install -r requirements.txt
+### Setup
 
-# Set up environment
-cp .env.example .env
+1. **Clone and setup the environment:**
+   ```bash
+   git clone <your-repo-url>
+   cd fitness-app
+   
+   # Windows
+   scripts\setup.bat
+   
+   # Linux/Mac  
+   chmod +x scripts/setup.sh
+   scripts/setup.sh
+   ```
 
-# Edit .env and add your API key(s):
-# OPENAI_API_KEY=your_openai_key_here (Required for OpenAI models)
-# ANTHROPIC_API_KEY=your_anthropic_key_here (Optional, for Anthropic models)
+2. **Configure your API keys:**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env and add your API keys
+   OPENAI_API_KEY=your_openai_key_here
+   ANTHROPIC_API_KEY=your_anthropic_key_here
+   ```
 
-# Launch the app
-python fitness_agent/app.py
+3. **Run the Gradio web interface:**
+   ```bash
+   # Option 1: Using the run script
+   python scripts/run_gradio.py
+   
+   # Option 2: Using Poetry directly
+   cd apps/gradio-app
+   poetry run fitness-gradio
+   ```
+
+4. **Open your browser to `http://localhost:7860`**
+
+## 🏗️ Architecture
+
+This project uses a **monorepo structure** that supports multiple frontend applications while sharing core business logic:
+
+```
+fitness-app/
+├── shared/                    # 📦 Core business logic library
+│   └── src/fitness_core/     # AI agents, models, services
+├── apps/
+│   └── gradio-app/           # 🎨 Web interface (Gradio)
+├── scripts/                  # 🔧 Setup and run scripts
+├── tests/                    # 🧪 Test files
+└── docs/                     # 📚 Documentation
 ```
 
-### Option 2: Use the Interface
-1. **Select your AI model** from the dropdown
-   - � OpenAI models are ready to use (recommended)
-   - � Anthropic models available but require additional setup
-2. **Start chatting** about your fitness goals
-3. **Be specific** about your level, equipment, and preferences
-4. **Get personalized plans** and ask follow-up questions
+### Shared Core Library (`fitness_core`)
+- **agents/**: AI agent implementations (OpenAI + Anthropic support)
+- **services/**: Business logic (conversation management, streaming)
+- **utils/**: Configuration, logging, utilities
 
-## 🎯 Example Prompts
+### Apps
+- **gradio-app/**: Interactive web interface with real-time chat
 
-- "Create a beginner workout plan for me"
-- "I want to lose weight - help me with a fitness plan"
-- "Design a muscle building program for intermediate level"
-- "I need a meal plan for gaining muscle mass"
-- "Help me with a home workout routine with no equipment"
+## 🤖 Supported AI Models
 
-## 🤖 AI Model Options
+### OpenAI Models
+- **GPT-4o**: Latest with vision and advanced capabilities
+- **GPT-4o-mini**: Fast, capable, cost-effective ⭐ *Recommended*
+- **GPT-4 Turbo**: Large context window
+- **GPT-3.5 Turbo**: Cost-effective option
+- **o1-preview/o1-mini**: Advanced reasoning models
 
-| Model | Speed | Capability | Cost | Best For |
-|-------|--------|------------|------|----------|
-| gpt-4o-mini | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | Balanced performance (recommended) |
-| gpt-4o | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Latest features with vision |
-| gpt-3.5-turbo | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | Quick questions, cost-effective |
-| gpt-4-turbo | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Large context, reliable |
-| o1-mini | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Advanced reasoning tasks |
+### Anthropic Models  
+- **Claude-3.5 Haiku**: Fast and responsive ⭐ *Recommended*
+- **Claude-3.5 Sonnet**: Excellent balance of intelligence and speed
+- **Claude-3 Haiku**: Most cost-effective
+- **Claude-4 models**: Premium tier (when available)
 
-## 📚 Documentation
+## ✨ Features
 
-- **[Complete Model Guide](fitness_agent/COMPLETE_MODEL_GUIDE.md)** - Everything about AI models
-- **[Examples](fitness_agent/examples.py)** - Code examples for different use cases
-- **[Repository Guide](fitness_agent/REPOSITORY_GUIDE.md)** - Development information
+- 🤖 **Multi-Provider AI Support**: OpenAI and Anthropic models
+- 💬 **Real-time Streaming**: Live response streaming
+- 🏋️ **Personalized Plans**: Custom workout and meal plans
+- 📱 **Mobile-Friendly**: Responsive web interface
+- 🎨 **Beautiful UI**: Modern Gradio interface
+- ⚡ **Fast Setup**: One-command installation
+- 🔧 **Extensible**: Easy to add new interfaces
 
-## 🛠️ Tech Stack
+## 🛠️ Development
 
-- **Backend**: Python, LiteLLM, OpenAI API, Anthropic API
-- **Frontend**: Gradio
-- **AI Models**: OpenAI GPT (working), Anthropic Claude (configured)
-- **Features**: Real-time streaming, conversation memory, model switching
+### Project Structure Benefits
+- **Shared Logic**: AI agents and business logic in one place
+- **Independent Apps**: Each interface can be developed separately
+- **Easy Testing**: Test core logic once, UI components separately
+- **Technology Flexibility**: Add FastAPI, React, CLI, mobile apps easily
 
----
+### Adding New Applications
 
-*Built with ❤️ for fitness enthusiasts*
+Want to add a FastAPI backend or React frontend? See the [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed instructions.
 
-*Start your fitness journey today with personalized AI guidance!*
+Example for FastAPI:
+```bash
+mkdir -p apps/api/src/fitness_api
+cd apps/api
+# Create pyproject.toml with fitness-core dependency
+poetry install
+# Build your FastAPI app using shared fitness_core library
+```
+
+### Running Tests
+```bash
+# Test shared core
+cd shared && poetry run pytest
+
+# Test Gradio app  
+cd apps/gradio-app && poetry run pytest
+```
+
+## 🎯 Usage Examples
+
+### Web Interface
+1. Open http://localhost:7860
+2. Select your preferred AI model
+3. Chat naturally: *"Create a beginner workout plan for weight loss"*
+4. Get personalized fitness plans with structured workout and meal plans
+
+### Programmatic Usage
+```python
+from fitness_core import FitnessAgent
+
+# Create agent with your preferred model
+agent = FitnessAgent("gpt-4o-mini")
+
+# Get fitness advice
+response = agent.run("I want to build muscle, I'm a beginner")
+print(response)
+```
+
+## 🔧 Configuration
+
+All configuration is handled through environment variables:
+
+```bash
+# API Keys (at least one required)
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+
+# Model Selection
+AI_MODEL=gpt-4o-mini  # Default model to use
+
+# Server Configuration  
+SERVER_PORT=7860      # Gradio server port
+DEBUG=false           # Debug mode
+
+# Logging
+LOG_LEVEL=INFO        # DEBUG, INFO, WARNING, ERROR
+LOG_FILE=app.log      # Optional log file
+```
+
+## 🚀 Deployment
+
+### Docker (Coming Soon)
+```bash
+docker-compose up
+```
+
+### Manual Deployment
+Each app can be deployed independently:
+
+```bash
+# Deploy Gradio app
+cd apps/gradio-app
+poetry build
+# Deploy the built package
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes in the appropriate app or shared library
+4. Add tests for new functionality
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to the branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- 📖 [Developer Guide](docs/DEVELOPER_GUIDE.md) - How to extend the app
+- 🤖 [Model Guide](docs/COMPLETE_MODEL_GUIDE.md) - AI model information
+- 🏗️ [Architecture Guide](docs/REPOSITORY_GUIDE.md) - Project structure details
+
+## 🎉 Acknowledgments
+
+- Built with [OpenAI Agents](https://github.com/openai/openai-agents) library
+- UI powered by [Gradio](https://gradio.app/)
+- Model support via [LiteLLM](https://github.com/BerriAI/litellm)

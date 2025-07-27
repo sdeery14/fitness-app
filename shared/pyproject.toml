@@ -1,17 +1,16 @@
 [tool.poetry]
-name = "fitness-agent"
+name = "fitness-core"
 version = "0.1.0"
-description = ""
+description = "Core fitness AI agent library - shared business logic"
 authors = ["Sean Deery <sdeery14@gmail.com>"]
 readme = "README.md"
+packages = [{include = "fitness_core", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
 openai-agents = {extras = ["litellm"], version = "^0.2.3"}
 python-dotenv = "^1.1.1"
-reportlab = "^4.4.3"
-gradio = "^5.38.1"
-
+pydantic = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core"]

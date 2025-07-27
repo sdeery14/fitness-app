@@ -1,38 +1,13 @@
-from pydantic import BaseModel
-from agents import Agent, Runner
-from dotenv import load_dotenv
+"""
+AI model provider management and configuration.
+"""
 import os
-from typing import Optional
-
-load_dotenv()
-
-
-class FitnessPlan(BaseModel):
-    name: str
-    training_plan: str
-    meal_plan: str
+from typing import Dict, List, Tuple, Optional
+from .models import AgentConfig
 
 
-class FitnessAgent(Agent):
-    """
-    A helpful assistant for general fitness guidance and handoffs to a plan-building agent.
-    
-    Supports multiple AI providers via LiteLLM (as of January 2025):
-    
-    Anthropic models:
-    - Claude-4: claude-opus-4-20250514, claude-sonnet-4-20250514 (Premium)
-    - Claude-3.7: claude-3-7-sonnet-20250219 (Extended thinking)
-    - Claude-3.5: claude-3-5-sonnet-20241022 (latest), claude-3-5-sonnet-20240620 (stable), claude-3-5-haiku-20241022 (fast)
-    - Claude-3: claude-3-haiku-20240307 (legacy but reliable)
-    
-    OpenAI models:
-    - GPT-4o: gpt-4o, gpt-4o-mini (Vision + latest capabilities)
-    - GPT-4: gpt-4-turbo (Legacy but stable)
-    - GPT-3.5: gpt-3.5-turbo (Cost-effective)
-    - Reasoning: o1-preview, o1-mini, o3-mini (Advanced reasoning)
-    
-    Note: Some older models may be deprecated. Always check provider documentation.
-    """
+class ModelProvider:
+    """Manages AI model configurations and provider-specific logic."""
 
     # Available models via LiteLLM and native OpenAI
     # Updated to include both Anthropic and OpenAI models as of January 2025
@@ -71,100 +46,6 @@ class FitnessAgent(Agent):
         "o3-mini": "o3-mini",                                  # Latest reasoning model
     }
 
-    def __init__(self, model_name: Optional[str] = None):
-        """
-        Initialize the Fitness Agent with configurable AI model (Anthropic or OpenAI).
-        
-        Args:
-            model_name: Name of the AI model to use. Can be a key from SUPPORTED_MODELS
-                       or a full model identifier. Defaults to claude-3.5-haiku if not specified.
-                       Can also be set via AI_MODEL, ANTHROPIC_MODEL, or OPENAI_MODEL environment variables.
-        """
-        # Determine which model to use
-        if model_name is None:
-            # Check environment variables in priority order
-            model_name = (
-                os.getenv("AI_MODEL") or 
-                os.getenv("ANTHROPIC_MODEL") or 
-                os.getenv("OPENAI_MODEL") or 
-                "gpt-4o-mini"  # Default fallback - reliable OpenAI model
-            )
-        
-        # Validate the model name
-        is_valid, validation_message = self.validate_model_name(model_name)
-        if not is_valid:
-            print(f"Warning: {validation_message}")
-            print(f"Falling back to default model: gpt-4o-mini")
-            model_name = "gpt-4o-mini"
-        
-        # Resolve model name to full identifier
-        if model_name in self.SUPPORTED_MODELS:
-            full_model_name = self.SUPPORTED_MODELS[model_name]
-        else:
-            # Assume it's already a full model identifier
-            full_model_name = model_name
-        
-        # Determine if this is an OpenAI model or needs LiteLLM prefix
-        if self._is_openai_model(model_name, full_model_name):
-            # Use native OpenAI model (no prefix needed)
-            final_model = full_model_name
-        else:
-            # For Anthropic models, use the full model name as-is since it already has litellm/ prefix
-            final_model = full_model_name
-
-        # Store the model information for debugging
-        self.model_name = model_name
-        self.full_model_name = full_model_name
-        self.final_model = final_model
-        self.provider = self._get_provider(model_name, full_model_name)
-
-        fitness_plan_agent = Agent(
-            name="Fitness Plan Assistant",
-            instructions="You are a helpful assistant for creating personalized fitness plans.",
-            model=final_model,
-            output_type=FitnessPlan
-        )
-
-        super().__init__(
-            name="Fitness Assistant",
-            model=final_model,
-            instructions="""
-            You are a helpful assistant for fitness-related queries.
-            
-            If the user wants to create a fitness plan, hand them off to the Fitness Plan Assistant.
-            """,
-            handoffs=[fitness_plan_agent]
-        )
-
-    def _is_openai_model(self, model_name: str, full_model_name: str) -> bool:
-        """Check if this is an OpenAI model that should use native API."""
-        # Check direct model name matches
-        openai_models = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "o1-preview", "o1-mini", "o3-mini"]
-        if model_name in openai_models:
-            return True
-        
-        # Check for OpenAI indicators in model names
-        openai_prefixes = ["gpt-", "o1-", "o3-", "openai/", "litellm/openai/"]
-        for prefix in openai_prefixes:
-            if prefix in model_name.lower() or prefix in full_model_name.lower():
-                return True
-        
-        return False
-    
-    def _get_provider(self, model_name: str, full_model_name: str) -> str:
-        """Determine the provider based on the model."""
-        if self._is_openai_model(model_name, full_model_name):
-            return "openai"
-        elif "claude" in model_name.lower() or "anthropic" in full_model_name.lower():
-            return "anthropic"
-        else:
-            return "unknown"
-
-    @classmethod
-    def list_supported_models(cls) -> dict:
-        """Return a dictionary of supported model names and their full identifiers."""
-        return cls.SUPPORTED_MODELS.copy()
-
     @classmethod
     def get_model_info(cls, model_name: str) -> str:
         """Get information about a specific model."""
@@ -191,7 +72,7 @@ class FitnessAgent(Agent):
         return model_info.get(model_name, "Model information not available")
 
     @classmethod
-    def get_recommended_models(cls) -> list:
+    def get_recommended_models(cls) -> List[str]:
         """Get a list of recommended models that are most likely to be available."""
         return [
             # Anthropic recommendations (most reliable first)
@@ -210,9 +91,9 @@ class FitnessAgent(Agent):
         ]
 
     @classmethod 
-    def get_models_by_provider(cls) -> dict:
+    def get_models_by_provider(cls) -> Dict[str, Dict[str, str]]:
         """Get models organized by provider."""
-        models = cls.list_supported_models()
+        models = cls.SUPPORTED_MODELS
         providers = {
             "anthropic": {},
             "openai": {},
@@ -230,9 +111,9 @@ class FitnessAgent(Agent):
         return providers
 
     @classmethod
-    def get_models_table_data(cls) -> list:
+    def get_models_table_data(cls) -> List[List[str]]:
         """Get model data formatted for table display."""
-        models = cls.list_supported_models()
+        models = cls.SUPPORTED_MODELS
         table_data = []
         
         # Define capability ratings
@@ -317,7 +198,7 @@ class FitnessAgent(Agent):
         return table_data
 
     @classmethod
-    def validate_model_name(cls, model_name: str) -> tuple[bool, str]:
+    def validate_model_name(cls, model_name: str) -> Tuple[bool, str]:
         """
         Validate if a model name is in our supported list and provide helpful feedback.
         
@@ -333,62 +214,85 @@ class FitnessAgent(Agent):
             recommended = ", ".join(cls.get_recommended_models())
             return False, f"Model '{model_name}' not found. Recommended models: {recommended}"
 
+    @classmethod
+    def is_openai_model(cls, model_name: str, full_model_name: str) -> bool:
+        """Check if this is an OpenAI model that should use native API."""
+        # Check direct model name matches
+        openai_models = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "o1-preview", "o1-mini", "o3-mini"]
+        if model_name in openai_models:
+            return True
+        
+        # Check for OpenAI indicators in model names
+        openai_prefixes = ["gpt-", "o1-", "o3-", "openai/", "litellm/openai/"]
+        for prefix in openai_prefixes:
+            if prefix in model_name.lower() or prefix in full_model_name.lower():
+                return True
+        
+        return False
+    
+    @classmethod
+    def get_provider(cls, model_name: str, full_model_name: str) -> str:
+        """Determine the provider based on the model."""
+        if cls.is_openai_model(model_name, full_model_name):
+            return "openai"
+        elif "claude" in model_name.lower() or "anthropic" in full_model_name.lower():
+            return "anthropic"
+        else:
+            return "unknown"
 
-if __name__ == "__main__":
-    # Example usage with different models
-    print("🤖 Available AI Models (Anthropic + OpenAI):")
-    print("=" * 60)
-    
-    # Show models by provider
-    providers = FitnessAgent.get_models_by_provider()
-    
-    print("🔵 ANTHROPIC MODELS:")
-    for name, full_id in providers["anthropic"].items():
-        print(f"  • {name}: {full_id}")
-        print(f"    {FitnessAgent.get_model_info(name)}")
-        print()
-    
-    print("🟢 OPENAI MODELS:")
-    for name, full_id in providers["openai"].items():
-        print(f"  • {name}: {full_id}")
-        print(f"    {FitnessAgent.get_model_info(name)}")
-        print()
-    
-    print("🎯 RECOMMENDED MODELS (most likely to work):")
-    recommended = FitnessAgent.get_recommended_models()
-    for model in recommended:
-        provider_icon = "🔵" if "claude" in model else "🟢" if any(x in model for x in ["gpt", "o1", "o3"]) else "⚪"
-        print(f"  {provider_icon} {model}")
-    
-    print("\n" + "="*60 + "\n")
-    
-    # Create agent with default model
-    print("Creating agent with default model (gpt-4o-mini)...")
-    agent = FitnessAgent()
-    print(f"✅ Created agent:")
-    print(f"   Model name: {agent.model_name}")
-    print(f"   Provider: {agent.provider}")
-    print(f"   Final model: {agent.final_model}")
-    
-    print("\n" + "="*60 + "\n")
-    
-    # Example with OpenAI model
-    print("Creating agent with OpenAI model (gpt-4o-mini)...")
-    try:
-        openai_agent = FitnessAgent("gpt-4o-mini")
-        print(f"✅ Created OpenAI agent:")
-        print(f"   Model name: {openai_agent.model_name}")
-        print(f"   Provider: {openai_agent.provider}")
-        print(f"   Final model: {openai_agent.final_model}")
-    except Exception as e:
-        print(f"⚠️ Could not create OpenAI agent: {e}")
-        print("   (This is normal if you don't have OPENAI_API_KEY set)")
-    
-    print("\n💡 To actually run the agents:")
-    print("   - Set ANTHROPIC_API_KEY for Claude models")
-    print("   - Set OPENAI_API_KEY for GPT models")
-    print("   - Use Runner.run_sync(agent, 'your message') to chat")
-    
-    # Uncomment this to test with actual API call:
-    # result = Runner.run_sync(agent, "Hello. Please make me a fitness plan.")
-    # print(result.final_output)
+    @classmethod
+    def resolve_model_name(cls, model_name: Optional[str] = None) -> str:
+        """
+        Resolve model name from various sources (env vars, default, etc.).
+        
+        Args:
+            model_name: Explicit model name, if provided
+            
+        Returns:
+            Resolved model name
+        """
+        if model_name is None:
+            # Check environment variables in priority order
+            model_name = (
+                os.getenv("AI_MODEL") or 
+                os.getenv("ANTHROPIC_MODEL") or 
+                os.getenv("OPENAI_MODEL") or 
+                "gpt-4o-mini"  # Default fallback - reliable OpenAI model
+            )
+        
+        # Validate the model name
+        is_valid, validation_message = cls.validate_model_name(model_name)
+        if not is_valid:
+            print(f"Warning: {validation_message}")
+            print(f"Falling back to default model: gpt-4o-mini")
+            model_name = "gpt-4o-mini"
+        
+        return model_name
+
+    @classmethod
+    def get_final_model_identifier(cls, model_name: str) -> str:
+        """
+        Get the final model identifier to use with the agents library.
+        
+        Args:
+            model_name: Model name (key or full identifier)
+            
+        Returns:
+            Final model identifier for the agents library
+        """
+        # Resolve model name to full identifier
+        if model_name in cls.SUPPORTED_MODELS:
+            full_model_name = cls.SUPPORTED_MODELS[model_name]
+        else:
+            # Assume it's already a full model identifier
+            full_model_name = model_name
+        
+        # Determine if this is an OpenAI model or needs LiteLLM prefix
+        if cls.is_openai_model(model_name, full_model_name):
+            # Use native OpenAI model (no prefix needed)
+            final_model = full_model_name
+        else:
+            # For Anthropic models, use the full model name as-is since it already has litellm/ prefix
+            final_model = full_model_name
+        
+        return final_model

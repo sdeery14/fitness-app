@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "fitness-app"
+version = "0.1.0"
+description = "AI-powered fitness assistant with personalized workout and meal planning"
+authors = ["Sean Deery <sdeery14@gmail.com>"]
+readme = "README.md"
+packages = [{include = "fitness_app", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai-agents = {extras = ["litellm"], version = "^0.2.3"}
+python-dotenv = "^1.1.1"
+reportlab = "^4.4.3"
+gradio = "^5.38.1"
+
+[tool.poetry.scripts]
+fitness-app = "fitness_app.main:main"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

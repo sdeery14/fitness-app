@@ -1,4 +1,0 @@
-gradio==5.38.1
-openai-agents[litellm]==0.2.3
-python-dotenv==1.1.1
-reportlab==4.4.3
