@@ -66,6 +66,9 @@ jobs:
         # Navigate to HF space directory
         cd hf-space
         
+        # Note: API keys should be set directly in Hugging Face Space settings
+        echo "ℹ️ Remember to set OPENAI_API_KEY and ANTHROPIC_API_KEY in your HF Space settings"
+        
         # Check if there are changes to commit
         if git diff --quiet && git diff --staged --quiet; then
           echo "No changes to deploy"

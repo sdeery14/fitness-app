@@ -132,6 +132,10 @@ echo "│ HF_USERNAME     │ $HF_USERNAME                       │"
 echo "│ HF_SPACE_NAME   │ $HF_SPACE_NAME                     │"
 echo "└─────────────────┴────────────────────────────────────┘"
 echo ""
+print_warning "Note: API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY) should be set"
+echo "      directly in your Hugging Face Space settings for better security."
+echo "      See HF_SPACE_SETUP.md for instructions."
+echo ""
 
 print_step "Step 4: Adding Secrets to GitHub"
 echo "Follow these steps:"
@@ -166,7 +170,10 @@ if command -v gh &> /dev/null; then
         echo "$HF_USERNAME" | gh secret set HF_USERNAME
         echo "$HF_SPACE_NAME" | gh secret set HF_SPACE_NAME
         
-        print_success "Secrets set successfully!"
+        print_success "GitHub secrets set successfully!"
+        echo ""
+        print_warning "Next step: Set API keys in your Hugging Face Space settings"
+        echo "           See HF_SPACE_SETUP.md for detailed instructions"
     fi
 else
     print_warning "GitHub CLI not found. You'll need to set secrets manually."

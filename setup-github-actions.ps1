@@ -146,6 +146,10 @@ Write-Host "│ HF_USERNAME     │ $hfUsername                       │"
 Write-Host "│ HF_SPACE_NAME   │ $hfSpaceName                     │"
 Write-Host "└─────────────────┴────────────────────────────────────┘"
 Write-Host ""
+Write-Host "📝 Note: API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY) should be set" -ForegroundColor Yellow
+Write-Host "   directly in your Hugging Face Space settings for better security." -ForegroundColor Yellow
+Write-Host "   See HF_SPACE_SETUP.md for instructions." -ForegroundColor Yellow
+Write-Host ""
 
 Write-Step "Step 4: Adding Secrets to GitHub"
 Write-Host "Follow these steps:"
@@ -193,7 +197,10 @@ if ($ghCliAvailable) {
             $hfUsername | gh secret set HF_USERNAME
             $hfSpaceName | gh secret set HF_SPACE_NAME
             
-            Write-Success "Secrets set successfully!"
+            Write-Success "GitHub secrets set successfully!"
+            Write-Host ""
+            Write-Host "📝 Next step: Set API keys in your Hugging Face Space settings" -ForegroundColor Yellow
+            Write-Host "   See HF_SPACE_SETUP.md for detailed instructions" -ForegroundColor Yellow
         } catch {
             Write-Error "Failed to set secrets via GitHub CLI: $_"
         }

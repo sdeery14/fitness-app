@@ -45,12 +45,16 @@ This guide will help you set up automatic deployment from GitHub to Hugging Face
 | `HF_USERNAME` | Your Hugging Face username | `yourusername` |
 | `HF_SPACE_NAME` | Your space name | `fitness-ai-assistant` |
 
+**Note**: API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY) should be set directly in your Hugging Face Space settings for better security.
+
 ### Adding Each Secret:
 1. Click **New repository secret**
 2. Enter the **Name** (exactly as shown above)
 3. Enter the **Secret** (the actual value)
 4. Click **Add secret**
 5. Repeat for all three secrets
+
+**Important**: After deployment, remember to set your API keys directly in your Hugging Face Space settings (see `HF_SPACE_SETUP.md`).
 
 ## Step 4: Choose Your Workflow
 

@@ -37,7 +37,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install huggingface_hub[cli]
-        if [ -f requirements.txt ]; then pip install -r requirements.txt --dry-run; fi
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Validate app structure
       run: |
@@ -168,6 +168,9 @@ jobs:
         
         # Navigate to HF space directory
         cd hf-space
+        
+        # Note: API keys should be set directly in Hugging Face Space settings
+        echo "ℹ️ Remember to set OPENAI_API_KEY and ANTHROPIC_API_KEY in your HF Space settings"
         
         # Check for changes
         echo "🔍 Checking for changes..."
