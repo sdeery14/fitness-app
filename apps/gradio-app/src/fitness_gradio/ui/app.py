@@ -33,7 +33,7 @@ class FitnessAppUI:
             
             # Model selection section
             with gr.Row():
-                (model_table, model_filter, 
+                (model_dropdown, model_filter, 
                  selected_model, model_info_display) = UIComponents.create_model_selection_section()
             
             # Main chat interface
@@ -53,7 +53,7 @@ class FitnessAppUI:
             # Event handlers
             self._setup_event_handlers(
                 chatbot, chat_input, clear_btn, streaming_toggle,
-                model_table, model_filter, selected_model, model_info_display
+                model_dropdown, model_filter, selected_model, model_info_display
             )
     
     def _setup_event_handlers(
@@ -62,7 +62,7 @@ class FitnessAppUI:
         chat_input: gr.MultimodalTextbox,
         clear_btn: gr.Button,
         streaming_toggle: gr.Checkbox,
-        model_table: gr.DataFrame,
+        model_dropdown: gr.Dropdown,
         model_filter: gr.Dropdown,
         selected_model: gr.Textbox,
         model_info_display: gr.Markdown
@@ -83,17 +83,10 @@ class FitnessAppUI:
         )
         bot_msg.then(lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input])
 
-        # Model table filtering
-        model_filter.change(
-            UIHandlers.filter_model_table,
-            inputs=[model_filter],
-            outputs=[model_table]
-        )
-        
-        # Model selection from table
-        model_table.select(
-            UIHandlers.select_model_from_table,
-            inputs=[model_table],
+        # Model selection from dropdown
+        model_dropdown.change(
+            UIHandlers.select_model_from_dropdown,
+            inputs=[model_dropdown],
             outputs=[selected_model, model_info_display]
         )
 

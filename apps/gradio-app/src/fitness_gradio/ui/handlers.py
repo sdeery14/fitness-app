@@ -104,81 +104,20 @@ Please check your API keys and try a different model."""
             return f"❌ **Unexpected Error:** {str(e)}"
 
     @staticmethod
-    def filter_model_table(filter_choice: str) -> List[List[str]]:
-        """Filter the model table based on user selection."""
-        all_data = FitnessAgent.get_models_table_data()
-        
-        if filter_choice == "🔵 Anthropic Only":
-            return [row for row in all_data if "🔵 Anthropic" in row[1]]
-        elif filter_choice == "🟢 OpenAI Only":
-            return [row for row in all_data if "🟢 OpenAI" in row[1]]
-        elif filter_choice == "⭐ Recommended Only":
-            return [row for row in all_data if row[0] == "⭐"]
-        else:  # All Models
-            return all_data
-
-    @staticmethod
-    def select_model_from_table(table_data: Any, evt: gr.SelectData) -> Tuple[str, str]:
-        """Select a model from the table"""
+    def select_model_from_dropdown(selected_model: str) -> Tuple[str, str]:
+        """Handle model selection from dropdown"""
         try:
-            if evt is None:
-                return "", "Please select a model from the table"
+            # Ignore header selections (None values) and empty selections
+            if not selected_model or selected_model is None:
+                return "", ""
             
-            # Get the selected row index
-            row_index = evt.index[0] if evt.index else 0
-            
-            # Handle both DataFrame and list formats
-            try:
-                # Try pandas DataFrame access first
-                if hasattr(table_data, 'iloc') and row_index < len(table_data):
-                    row = table_data.iloc[row_index]
-                    if len(row) >= 7:
-                        rating = row.iloc[0]  # Recommendation star
-                        provider = row.iloc[1]  # Provider
-                        selected_model = row.iloc[2]  # Model name
-                        capability = row.iloc[3]  # Capability rating
-                        speed = row.iloc[4]  # Speed rating
-                        cost = row.iloc[5]  # Cost rating
-                        description = row.iloc[6]  # Description
-                    else:
-                        return "", "Invalid table row - insufficient columns"
-                # Fall back to list access
-                elif isinstance(table_data, list) and row_index < len(table_data) and len(table_data[row_index]) >= 7:
-                    rating = table_data[row_index][0]  # Recommendation star
-                    provider = table_data[row_index][1]  # Provider
-                    selected_model = table_data[row_index][2]  # Model name
-                    capability = table_data[row_index][3]  # Capability rating
-                    speed = table_data[row_index][4]  # Speed rating
-                    cost = table_data[row_index][5]  # Cost rating
-                    description = table_data[row_index][6]  # Description
-                else:
-                    return "", "Invalid selection - please try clicking on a model row"
-                    
-            except (IndexError, KeyError) as data_error:
-                logger.error(f"Data access error: {str(data_error)} - Table type: {type(table_data)}, Row index: {row_index}")
-                return "", "Error accessing table data - please try again"
-            
-            # Update the model and get the change result
-            change_result = UIHandlers.change_model(selected_model)
-            
-            if "✅" in change_result:
-                model_info = f"""✅ **Model Successfully Selected!**
-
-🤖 **Current Model:** `{selected_model}`
-{provider}
-**Capability:** {capability} | **Speed:** {speed} | **Cost:** {cost}
-
-💡 **Description:** {description}
-
-📊 **Status:** Ready to chat with the new model!"""
-            else:
-                model_info = change_result  # Show the error message
-            
-            return selected_model, model_info
+            # Since we removed the model info display, just return the selected model
+            # The dropdown itself will show the current selection
+            return selected_model, ""
             
         except Exception as e:
-            logger.error(f"Error in select_model_from_table: {str(e)} - Table type: {type(table_data)}, Row index: {row_index if 'row_index' in locals() else 'unknown'}")
-            return "", f"Error selecting model: {str(e)}"
+            logger.error(f"Error selecting model from dropdown: {str(e)}")
+            return selected_model or "", ""
 
     @staticmethod
     def print_like_dislike(x: gr.LikeData) -> None:

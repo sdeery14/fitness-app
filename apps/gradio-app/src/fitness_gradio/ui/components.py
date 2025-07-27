@@ -24,55 +24,99 @@ class UIComponents:
     @staticmethod
     def create_model_selection_section() -> tuple:
         """
-        Create the model selection section with table and controls.
+        Create the model selection section with dropdown and controls.
         
         Returns:
-            Tuple of (model_table, model_filter, selected_model, model_info_display)
+            Tuple of (model_dropdown, model_filter, selected_model, model_info_display)
         """
         with gr.Column():
             gr.Markdown("### 🤖 AI Model Selection")
-            gr.Markdown("Browse and select your preferred AI model. Click on a row to select it.")
             
-            # Create model table data
+            # Get model data and organize by provider
             table_data = FitnessAgent.get_models_table_data()
             
-            model_table = gr.DataFrame(
-                value=table_data,
-                headers=["⭐", "Provider", "Model Name", "Capability", "Speed", "Cost", "Description"],
-                datatype=["str", "str", "str", "str", "str", "str", "str"],
-                interactive=False,
-                wrap=True,
-                elem_classes=["model-table"]
+            # Organize models by provider
+            anthropic_models = []
+            openai_models = []
+            
+            for row in table_data:
+                star, provider, model_name, capability, speed, cost, description = row
+                
+                # Create simple display text: model name (provider)
+                provider_short = "Anthropic" if "Anthropic" in provider else "OpenAI"
+                display_text = f"{model_name} ({provider_short})"
+                
+                if "Anthropic" in provider:
+                    anthropic_models.append((display_text, model_name))
+                else:  # OpenAI
+                    openai_models.append((display_text, model_name))
+            
+            # Sort within each provider by model size (largest to smallest)
+            # Define model hierarchy for sorting
+            model_order = {
+                # Anthropic models (largest to smallest)
+                "claude-4-opus": 0,
+                "claude-4-sonnet": 1,
+                "claude-3.7-sonnet": 2,
+                "claude-3.5-sonnet-latest": 3,
+                "claude-3.5-sonnet": 4,
+                "claude-3.5-haiku": 5,
+                "claude-3-haiku": 6,
+                
+                # OpenAI models (largest to smallest)
+                "gpt-4o": 0,
+                "gpt-4-turbo": 1,
+                "gpt-4": 2,
+                "gpt-4o-mini": 3,
+                "gpt-3.5-turbo": 4,
+                "o1-preview": 5,
+                "o1-mini": 6,
+                "o3-mini": 7,
+            }
+            
+            anthropic_models.sort(key=lambda x: model_order.get(x[1], 999))
+            openai_models.sort(key=lambda x: model_order.get(x[1], 999))
+            
+            # Create final dropdown choices without headers
+            dropdown_choices = []
+            
+            # Add Anthropic models first (alphabetically first)
+            dropdown_choices.extend(anthropic_models)
+            
+            # Add OpenAI models
+            dropdown_choices.extend(openai_models)
+            
+            # Main model selection dropdown (full width)
+            model_dropdown = gr.Dropdown(
+                choices=dropdown_choices,
+                value="gpt-4o-mini",
+                label="Select AI Model",
+                info="Choose your preferred AI model for fitness guidance",
+                elem_classes=["model-dropdown"]
             )
             
-            # Hidden component to manage selection
+            # Dummy filter dropdown for compatibility (hidden)
+            model_filter = gr.Dropdown(
+                choices=["All Models"],
+                value="All Models",
+                visible=False
+            )
+            
+            # Hidden component to manage selection (for compatibility)
             selected_model = gr.Textbox(
                 value="gpt-4o-mini",
                 visible=False,
                 label="Selected Model"
             )
-            
-            # Model filter dropdown
-            with gr.Row():
-                model_filter = gr.Dropdown(
-                    choices=["All Models", "🔵 Anthropic Only", "🟢 OpenAI Only", "⭐ Recommended Only"],
-                    value="All Models",
-                    label="Filter Models",
-                    scale=3
-                )
         
-        # Model information display
+        # Hidden model info display (for compatibility with existing handlers)
         model_info_display = gr.Markdown(
-            value=f"""🤖 **Current Model:** `gpt-4o-mini`
-
-💡 **Description:** {FitnessAgent.get_model_info('gpt-4o-mini')}
-
-📊 **Status:** Ready to chat!""",
-            visible=True,
+            value="",
+            visible=False,
             elem_classes=["model-info"]
         )
         
-        return model_table, model_filter, selected_model, model_info_display
+        return model_dropdown, model_filter, selected_model, model_info_display
     
     @staticmethod
     def create_chatbot() -> gr.Chatbot:
