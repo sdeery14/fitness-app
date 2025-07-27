@@ -1,28 +1,33 @@
-# Fitness Agent - Repository Structure
+# Fitness App - Repository Structure
 
-## 📁 Core Files
+## 📁 Core Architecture
 
-### Main Application
-- **`app.py`** - Main Gradio web interface with model selection and chat
-- **`fitness_agent.py`** - Core FitnessAgent class with Anthropic model support
+### Monorepo Structure
+- **`shared/`** - Core fitness logic and utilities
+- **`apps/gradio-app/`** - Gradio web interface with voice input
+- **`docs/`** - Documentation and guides
+- **`tests/`** - Test files organized by component
+
+### Main Components
+- **`apps/gradio-app/src/fitness_gradio/main.py`** - Gradio application entry point
+- **`apps/gradio-app/src/fitness_gradio/ui/`** - UI components and handlers
+- **`shared/src/fitness_core/`** - Shared business logic and agents
 
 ### Documentation
-- **`COMPLETE_MODEL_GUIDE.md`** - Comprehensive guide for all AI models and usage
-- **`README.md`** - Main project documentation and quick start guide
-
-### Examples & Testing
-- **`examples.py`** - Code examples showing different ways to use the agent
+- **`GROQ_INTEGRATION.md`** - Groq models setup and usage (including Whisper for voice)
+- **`DEVELOPER_GUIDE.md`** - Architecture guide for adding new applications
+- **`VOICE_SETUP.md`** - Voice input setup and troubleshooting
 
 ### Configuration
-- **`pyproject.toml`** - Python project configuration with dependencies
-- **`.env.example`** - Environment variables template
+- **`shared/pyproject.toml`** - Core dependencies and utilities
+- **`apps/gradio-app/pyproject.toml`** - Gradio-specific dependencies
 
 ## 🚀 Quick Start
 
-1. **Install dependencies**: `pip install -r requirements.txt`
-2. **Set up environment**: Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`
-3. **Run the app**: `python fitness_agent/app.py`
-4. **Or run examples**: `python fitness_agent/examples.py`
+1. **Install dependencies**: `cd apps/gradio-app && poetry install`
+2. **Set up environment**: Set `GROQ_API_KEY` environment variable
+3. **Run the app**: `poetry run python -m fitness_gradio.main`
+4. **Use voice input**: Click the microphone button in the chat interface
 
 ## 📚 Need Help?
 

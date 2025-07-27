@@ -2,96 +2,109 @@
 
 An AI-powered fitness companion that provides personalized workout plans, meal planning, and fitness guidance using state-of-the-art language models.
 
-## 🚀 Quick Start
+## ✨ Features
+
+- **🎤 Voice Input**: Record voice messages using Groq's Whisper for speech-to-text
+- **🤖 Multiple AI Models**: Choose from OpenAI, Anthropic, and Groq models
+- **� Conversational Interface**: Natural conversation with memory across sessions
+- **📋 Personalized Plans**: Custom workout and meal plans based on your goals
+- **🔄 Real-time Streaming**: See AI responses as they're generated
+- **📁 File Support**: Upload documents for context
+
+## �🚀 Quick Start
 
 ### Prerequisites
 - Python 3.12+
 - Poetry (for dependency management)
-- OpenAI API Key and/or Anthropic API Key
+- API Keys: OpenAI, Anthropic, and/or Groq
 
 ### Setup
 
-1. **Clone and setup the environment:**
+1. **Clone the repository:**
    ```bash
    git clone <your-repo-url>
    cd fitness-app
-   
-   # Windows
-   scripts\setup.bat
-   
-   # Linux/Mac  
-   chmod +x scripts/setup.sh
-   scripts/setup.sh
    ```
 
-2. **Configure your API keys:**
+2. **Install dependencies:**
    ```bash
-   # Copy the example environment file
+   cd apps/gradio-app
+   poetry install
+   ```
+
+3. **Configure your API keys:**
+   ```bash
+   # Set environment variables (Windows PowerShell)
+   $env:OPENAI_API_KEY = "your_openai_key_here"
+   $env:ANTHROPIC_API_KEY = "your_anthropic_key_here"
+   $env:GROQ_API_KEY = "your_groq_key_here"
+   
+   # Or create a .env file in the project root
    cp .env.example .env
-   
    # Edit .env and add your API keys
-   OPENAI_API_KEY=your_openai_key_here
-   ANTHROPIC_API_KEY=your_anthropic_key_here
    ```
 
-3. **Run the Gradio web interface:**
+4. **Run the application:**
    ```bash
-   # Option 1: Using the run script
-   python scripts/run_gradio.py
-   
-   # Option 2: Using Poetry directly
    cd apps/gradio-app
    poetry run fitness-gradio
    ```
 
-4. **Open your browser to `http://localhost:7860`**
+5. **Open your browser to `http://localhost:7860`**
 
-## 🏗️ Architecture
+## 🏗️ Project Structure
 
-This project uses a **monorepo structure** that supports multiple frontend applications while sharing core business logic:
+This project uses a **monorepo structure** with a clean separation of concerns:
 
 ```
 fitness-app/
 ├── shared/                    # 📦 Core business logic library
 │   └── src/fitness_core/     # AI agents, models, services
 ├── apps/
-│   └── gradio-app/           # 🎨 Web interface (Gradio)
-├── scripts/                  # 🔧 Setup and run scripts
+│   └── gradio-app/           # 🎨 Web interface with voice support
 ├── tests/                    # 🧪 Test files
-└── docs/                     # 📚 Documentation
+├── docs/                     # 📚 Documentation
+├── app.py                    # � Hugging Face Spaces entry point
+└── .github/workflows/        # 🔄 CI/CD pipelines
 ```
 
-### Shared Core Library (`fitness_core`)
-- **agents/**: AI agent implementations (OpenAI + Anthropic support)
+### Core Library (`fitness_core`)
+- **agents/**: AI agent implementations with multi-provider support
 - **services/**: Business logic (conversation management, streaming)
-- **utils/**: Configuration, logging, utilities
+- **utils/**: Configuration, logging, and utilities
 
-### Apps
-- **gradio-app/**: Interactive web interface with real-time chat
+### Gradio App
+- **ui/**: User interface components and handlers
+- **Voice Support**: Groq Whisper integration for speech-to-text
+- **Real-time Streaming**: Live AI response generation
 
 ## 🤖 Supported AI Models
 
-### OpenAI Models
-- **GPT-4o**: Latest with vision and advanced capabilities
-- **GPT-4o-mini**: Fast, capable, cost-effective ⭐ *Recommended*
+### 🟢 OpenAI Models
+- **GPT-4o**: Latest with vision capabilities
+- **GPT-4o-mini**: Fast, capable, cost-effective ⭐ *Default*
 - **GPT-4 Turbo**: Large context window
-- **GPT-3.5 Turbo**: Cost-effective option
-- **o1-preview/o1-mini**: Advanced reasoning models
+- **GPT-3.5 Turbo**: Most economical
+- **o1/o3 models**: Advanced reasoning
 
-### Anthropic Models  
-- **Claude-3.5 Haiku**: Fast and responsive ⭐ *Recommended*
-- **Claude-3.5 Sonnet**: Excellent balance of intelligence and speed
+### 🔵 Anthropic Models  
+- **Claude-3.5 Sonnet**: Excellent reasoning and analysis
+- **Claude-3.5 Haiku**: Fast and responsive
 - **Claude-3 Haiku**: Most cost-effective
-- **Claude-4 models**: Premium tier (when available)
+- **Claude-4 models**: Premium capabilities
 
-## ✨ Features
+### 🚀 Groq Models (Ultra-Fast)
+- **Llama-3.3-70b**: Excellent for complex fitness plans
+- **Mixtral-8x7b**: Great for structured output
+- **Whisper models**: Speech-to-text transcription
 
-- 🤖 **Multi-Provider AI Support**: OpenAI and Anthropic models
-- 💬 **Real-time Streaming**: Live response streaming
-- 🏋️ **Personalized Plans**: Custom workout and meal plans
-- 📱 **Mobile-Friendly**: Responsive web interface
-- 🎨 **Beautiful UI**: Modern Gradio interface
-- ⚡ **Fast Setup**: One-command installation
+## 🎤 Voice Input
+
+The app supports voice input using Groq's Whisper API:
+- Click the microphone button in the chat input
+- Speak your fitness questions naturally
+- Automatic transcription with high accuracy
+- See [VOICE_SETUP.md](apps/gradio-app/VOICE_SETUP.md) for setup details
 - 🔧 **Extensible**: Easy to add new interfaces
 
 ## 🛠️ Development

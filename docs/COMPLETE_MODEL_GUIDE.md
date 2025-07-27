@@ -1,30 +1,30 @@
-# Fitness Agent - Complete Model Guide
+# Fitness App - Complete Model Guide
 
-This comprehensive guide covers everything you need to know about using different Anthropic models with the Fitness AI Assistant.
+This comprehensive guide covers all AI models supported by the Fitness Assistant, including both text and voice capabilities.
 
-## 🤖 Currently Supported Models (January 2025)
+## 🤖 Primary Models (via LiteLLM)
 
-Based on Anthropic's latest API, these models are currently available:
+The fitness app uses LiteLLM for flexible model support across multiple providers:
 
-### Claude-4 (Latest Generation - Premium Tier)
-- **claude-4-opus**: `claude-opus-4-20250514` - Most capable and intelligent model. Superior reasoning, complex tasks
-- **claude-4-sonnet**: `claude-sonnet-4-20250514` - High-performance model with exceptional reasoning and efficiency
+### Groq Models (Recommended - Fast & Cost-Effective)
+- **llama-3.3-70b-versatile**: Latest Llama model, excellent for complex reasoning
+- **llama-3.1-8b-instant**: Ultra-fast responses, great for quick interactions  
+- **gemma2-9b-it**: Google's efficient instruction-tuned model
+- **mixtral-8x7b-32768**: Large context window for complex conversations
 
-### Claude-3.7 (Extended Thinking)
-- **claude-3.7-sonnet**: `claude-3-7-sonnet-20250219` - Enhanced model with extended thinking capabilities
+### Anthropic Models (Premium Quality)
+- **claude-3.5-sonnet**: Excellent balance of intelligence and speed
+- **claude-3.5-haiku**: Fast and compact for near-instant responses
+- **claude-3-opus**: Most capable for complex reasoning tasks
 
-### Claude-3.5 (Recommended for Most Users)
-- **claude-3.5-sonnet-latest**: `claude-3-5-sonnet-20241022` - Latest Claude 3.5 Sonnet with improved capabilities
-- **claude-3.5-sonnet**: `claude-3-5-sonnet-20240620` - Excellent balance of intelligence and speed (stable version)
-- **claude-3.5-haiku**: `claude-3-5-haiku-20241022` - **NEW DEFAULT** - Fast and compact model for near-instant responsiveness
+### OpenAI Models (Widely Compatible)
+- **gpt-4o-mini**: Default fallback model
+- **gpt-4o**: Latest GPT-4 model for complex tasks
+- **gpt-3.5-turbo**: Cost-effective option
 
-### Claude-3 (Legacy but Reliable)
-- **claude-3-haiku**: `claude-3-haiku-20240307` - Cost-effective, good for simple tasks
-
-### ❌ Deprecated Models (No Longer Available)
-- claude-3-opus, claude-3-sonnet
-- claude-2.1, claude-2
-- claude-instant-1.2, claude-instant-1
+### Voice Models (Groq Whisper)
+- **whisper-large-v3-turbo**: Fast speech-to-text ($0.04/minute)
+- **whisper-large-v3**: Higher accuracy speech-to-text
 
 ## 🚀 Quick Start
 
@@ -32,149 +32,148 @@ Based on Anthropic's latest API, these models are currently available:
 
 **Launch the app:**
 ```bash
-python app.py
+cd apps/gradio-app
+poetry run python -m fitness_gradio.main
 ```
 
-**Select a model:**
-- Use the "🤖 AI Model" dropdown at the top
-- Model changes automatically when selected (no button needed)
-- Model information updates in real-time
+**Features:**
+- Text chat with AI fitness assistant
+- Voice input via microphone button
+- Model selection through configuration
+- Real-time responses
 
-### 2. Programmatic Usage
+### 2. Voice Input Setup
 
-**Basic usage (uses default model):**
-```python
-from fitness_agent import FitnessAgent
-from agents import Runner
+**Set Groq API key:**
+```bash
+# Windows PowerShell
+$env:GROQ_API_KEY = "your-groq-api-key-here"
 
-agent = FitnessAgent()  # Uses claude-3.5-haiku by default
-result = Runner.run_sync(agent, "Create a fitness plan for me.")
+# Linux/Mac
+export GROQ_API_KEY="your-groq-api-key-here"
 ```
 
-**Specify a specific model:**
-```python
-# Using friendly name
-agent = FitnessAgent("claude-3.5-sonnet")
+**Using voice:**
+1. Click the circular microphone button
+2. Allow browser microphone access
+3. Speak clearly into your microphone
+4. Speech is automatically transcribed and sent
 
-# Using full model identifier  
-agent = FitnessAgent("claude-3-5-sonnet-20241022")
-```
+### 3. Configuration
 
-**Using environment variables:**
+**Environment variables:**
 ```env
-# In your .env file
-ANTHROPIC_API_KEY=your-api-key-here
-ANTHROPIC_MODEL=claude-3.5-sonnet
+# Required for voice input
+GROQ_API_KEY=your-groq-api-key-here
+
+# Optional model selection
+AI_MODEL=llama-3.3-70b-versatile
+ANTHROPIC_API_KEY=your-anthropic-key  # If using Claude models
+OPENAI_API_KEY=your-openai-key        # If using OpenAI models
 ```
 
 ## 📊 Model Comparison & Recommendations
 
-| Model | Speed | Capability | Cost | Best For |
-|-------|--------|------------|------|----------|
-| claude-4-opus | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Complex analysis, detailed plans |
-| claude-4-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Balanced high performance |
-| claude-3.7-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Extended thinking, complex tasks |
-| claude-3.5-sonnet-latest | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Latest improvements, recommended |
-| claude-3.5-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Stable, reliable choice |
-| claude-3.5-haiku | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | **DEFAULT** - Fast responses |
-| claude-3-haiku | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | Most cost-effective |
+| Provider | Model | Speed | Cost | Best For |
+|----------|-------|-------|------|----------|
+| Groq | llama-3.3-70b-versatile | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Complex reasoning, fast |
+| Groq | llama-3.1-8b-instant | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Quick responses |
+| Groq | gemma2-9b-it | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | General purpose |
+| Anthropic | claude-3.5-sonnet | ⭐⭐⭐⭐ | ⭐⭐⭐ | Balanced performance |
+| OpenAI | gpt-4o-mini | ⭐⭐⭐ | ⭐⭐⭐⭐ | Default fallback |
+| Groq | whisper-large-v3-turbo | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Voice transcription |
 
 ### 🎯 Use Case Recommendations
 
-**For beginners/quick questions:**
-- `claude-3.5-haiku` (default) - Fast and efficient
-- `claude-3-haiku` - Most cost-effective
+**For quick fitness questions:**
+- `llama-3.1-8b-instant` - Ultra-fast responses
+- `gemma2-9b-it` - Efficient and smart
 
 **For comprehensive fitness planning:**
-- `claude-3.5-sonnet` - Great balance 
-- `claude-3.5-sonnet-latest` - Latest improvements
-- `claude-3.7-sonnet` - Extended thinking capabilities
+- `llama-3.3-70b-versatile` - Advanced reasoning
+- `claude-3.5-sonnet` - High-quality responses
 
-**For complex analysis/detailed programs:**
-- `claude-4-sonnet` - High performance
-- `claude-4-opus` - Maximum capability (if available)
+**For voice input:**
+- `whisper-large-v3-turbo` - Fast speech-to-text
+- `whisper-large-v3` - Higher accuracy when needed
 
 ## 🔧 Configuration
 
 ### Environment Variables
 ```env
-# Required
+# For Groq models (including voice)
+GROQ_API_KEY=your-groq-api-key
+
+# For Anthropic models
 ANTHROPIC_API_KEY=your-anthropic-api-key
 
-# Optional - set default model
-ANTHROPIC_MODEL=claude-3.5-haiku
+# For OpenAI models
+OPENAI_API_KEY=your-openai-api-key
 
-# Optional - custom API base (for proxies)
-ANTHROPIC_API_BASE=https://your-proxy-url.com
+# Optional - set default model
+AI_MODEL=llama-3.3-70b-versatile
+
 ```
 
-### Model Validation
-The agent automatically validates model availability and falls back to the default if a model is not found.
+### Model Configuration
+The app uses LiteLLM to automatically handle different providers with consistent interfaces.
 
 ## 🛠️ Features
 
-### Seamless Model Switching
-- Change models anytime in the UI
-- Conversation history is preserved
-- No need to restart the application
+### Multi-Provider Support
+- Groq for fast, cost-effective models
+- Anthropic for high-quality responses
+- OpenAI for broad compatibility
+- Automatic provider detection via LiteLLM
+
+### Voice Integration
+- Real-time speech-to-text with Groq Whisper
+- Seamless text and voice input mixing
+- Cost-effective voice processing
 
 ### Automatic Fallbacks
-- Invalid models automatically fall back to default
-- Streaming issues handled gracefully
+- Invalid models automatically fall back to defaults
+- Provider unavailability handled gracefully
 - Clear error messages and suggestions
 
-### Real-time Information
-- Model capabilities and descriptions
-- Performance and cost indicators
-- Availability status
+## 🔍 Architecture
 
-## 🔍 Testing & Debugging
-
-**Test model availability:**
-```bash
-python test_updated_models.py
+**Core Components:**
 ```
+shared/src/fitness_core/
+├── agents/           # Model providers and base classes
+├── services/         # Conversation and agent runners
+└── utils/           # Configuration and utilities
 
-**List available models:**
-```python
-from fitness_agent import FitnessAgent
-
-models = FitnessAgent.list_supported_models()
-for name, full_id in models.items():
-    print(f"{name}: {full_id}")
-    print(f"  {FitnessAgent.get_model_info(name)}")
-```
-
-**Get recommended models:**
-```python
-recommended = FitnessAgent.get_recommended_models()
-print("Recommended models:", recommended)
+apps/gradio-app/src/fitness_gradio/
+├── ui/              # Gradio interface components
+└── main.py          # Application entry point
 ```
 
 ## 🚨 Troubleshooting
 
-**"Model not found" errors:**
-1. Check if the model is in the supported list
-2. Verify your API key has access to the model
-3. Claude-4 models may require special access
-4. Try a recommended model from the list
+**Voice input not working:**
+1. Check GROQ_API_KEY is set correctly
+2. Verify microphone permissions in browser
+3. Ensure scipy is installed (`poetry install`)
 
-**Streaming issues:**
-- Some models automatically fall back to non-streaming mode
-- This is normal behavior for certain Anthropic models
-- Toggle streaming mode if you encounter issues
+**Model errors:**
+1. Verify the correct API key is set for your chosen provider
+2. Check model availability in provider documentation
+3. Try a recommended fallback model
 
-**Performance concerns:**
-- Use `claude-3.5-haiku` for fastest responses
-- Use `claude-3-haiku` for most cost-effective option
-- Balance capability vs speed based on your needs
+**Performance issues:**
+- Use Groq models for fastest responses
+- Check your internet connection for voice features
+- Monitor API usage if experiencing rate limits
 
 ## 📚 Additional Resources
 
-- [Anthropic Models Documentation](https://docs.anthropic.com/en/docs/about-claude/models/overview)
-- [LiteLLM Anthropic Provider](https://docs.litellm.ai/docs/providers/anthropic)
-- Test your setup with: `python test_updated_models.py`
+- [Groq Models Documentation](https://console.groq.com/docs/models)
+- [LiteLLM Documentation](https://docs.litellm.ai/)
+- [Voice Setup Guide](../apps/gradio-app/VOICE_SETUP.md)
+- [Groq Integration Guide](GROQ_INTEGRATION.md)
 
 ---
 
-*This guide is current as of January 2025. Model availability may change - always check the latest Anthropic documentation.*
+*This guide covers the current multi-provider setup. See individual provider documentation for the latest model availability.*

@@ -9,7 +9,6 @@ from typing import List, Dict, Union, Generator, Any, Tuple, Optional
 from fitness_core.agents import FitnessAgent
 from fitness_core.services import ConversationManager, AgentRunner, ResponseFormatter
 from fitness_core.utils import get_logger
-from .audio_utils import AudioProcessor
 
 logger = get_logger(__name__)
 
@@ -126,50 +125,6 @@ Please check your API keys and try a different model."""
         logger.info(f"User feedback - Index: {x.index}, Value: {x.value}, Liked: {x.liked}")
 
     @staticmethod
-    def add_voice_message(history: List[Dict], audio_data: Optional[Tuple]) -> Tuple[List[Dict], gr.Audio]:
-        """
-        Process voice input and add to chat history
-        
-        Args:
-            history: Current Gradio chat history (for display)
-            audio_data: Audio data from microphone (sample_rate, audio_array)
-            
-        Returns:
-            Tuple of (updated_history, cleared_audio_input)
-        """
-        try:
-            if audio_data is None:
-                return history, gr.Audio(value=None)
-            
-            # Convert audio to text
-            transcribed_text = AudioProcessor.convert_audio_to_text(audio_data)
-            
-            if transcribed_text and transcribed_text.strip():
-                # Add voice message indicator to the text
-                display_text = f"🎤 {transcribed_text}"
-                
-                # Add to Gradio history for display
-                history.append({
-                    "role": "user", 
-                    "content": display_text
-                })
-                
-                # Add to conversation manager (without the voice indicator)
-                conversation_manager.add_user_message(transcribed_text)
-                logger.info(f"Added voice message to conversation. {conversation_manager.get_history_summary()}")
-            
-            return history, gr.Audio(value=None)
-            
-        except Exception as e:
-            logger.error(f"Error processing voice message: {str(e)}")
-            # Add error message to history
-            history.append({
-                "role": "assistant", 
-                "content": "Sorry, there was an error processing your voice message. Please try again."
-            })
-            return history, gr.Audio(value=None)
-
-    @staticmethod
     def add_message_with_audio(history: List[Dict], message: Dict) -> Tuple[List[Dict], gr.MultimodalTextbox]:
         """
         Add user message to chat history with proper validation for text, files, and audio
@@ -182,25 +137,15 @@ Please check your API keys and try a different model."""
             Tuple of (updated_history, cleared_input)
         """
         try:
-            # Debug: Log the message structure
-            logger.info(f"Received message: {type(message)} - Keys: {list(message.keys()) if isinstance(message, dict) else 'Not a dict'}")
-            if isinstance(message, dict):
-                if message.get("files"):
-                    logger.info(f"Files in message: {message['files']}")
-                if message.get("text"):
-                    logger.info(f"Text in message: {message['text']}")
-            
             user_content_parts = []
             
             # Handle file uploads (including audio from microphone)
             if message.get("files"):
                 for file_path in message["files"]:
                     if file_path:  # Validate file path exists
-                        logger.info(f"Processing file: {file_path}")
-                        
                         # Check if this is an audio file (from microphone recording)
                         if UIHandlers.is_audio_file(file_path):
-                            logger.info(f"Detected audio file: {file_path}")
+                            logger.info(f"Processing audio file: {file_path}")
                             # Process audio file for transcription
                             transcribed_text = UIHandlers.process_audio_file(file_path)
                             
@@ -214,14 +159,12 @@ Please check your API keys and try a different model."""
                                     "role": "user", 
                                     "content": display_text
                                 })
-                                logger.info(f"Successfully processed audio: {transcribed_text[:50]}...")
                             else:
                                 # Show transcription error
                                 history.append({
                                     "role": "user", 
                                     "content": f"🎤 {transcribed_text}"
                                 })
-                                logger.warning(f"Audio transcription failed: {transcribed_text}")
                         else:
                             # Handle non-audio file uploads
                             file_content = f"[File uploaded: {file_path}]"
@@ -231,7 +174,6 @@ Please check your API keys and try a different model."""
                                 "role": "user", 
                                 "content": {"path": file_path}
                             })
-                            logger.info(f"Processed non-audio file: {file_path}")
             
             # Handle text input
             if message.get("text") and message["text"].strip():
@@ -242,7 +184,6 @@ Please check your API keys and try a different model."""
                     "role": "user", 
                     "content": text_content
                 })
-                logger.info(f"Processed text input: {text_content[:50]}...")
             
             # Add to conversation manager (combine all content)
             if user_content_parts:
@@ -319,60 +260,6 @@ Please check your API keys and try a different model."""
         except Exception as e:
             logger.error(f"Error processing audio file {file_path}: {str(e)}")
             return f"[Voice transcription error: {str(e)}]"
-
-    @staticmethod
-    def add_message(history: List[Dict], message: Dict) -> Tuple[List[Dict], gr.MultimodalTextbox]:
-        """
-        Add user message to chat history with proper validation
-        
-        Args:
-            history: Current Gradio chat history (for display)
-            message: User message containing text and/or files
-            
-        Returns:
-            Tuple of (updated_history, cleared_input)
-        """
-        try:
-            user_content_parts = []
-            
-            # Handle file uploads
-            if message.get("files"):
-                for file_path in message["files"]:
-                    if file_path:  # Validate file path exists
-                        file_content = f"[File uploaded: {file_path}]"
-                        user_content_parts.append(file_content)
-                        # Add to Gradio history for display
-                        history.append({
-                            "role": "user", 
-                            "content": {"path": file_path}
-                        })
-            
-            # Handle text input
-            if message.get("text") and message["text"].strip():
-                text_content = message["text"].strip()
-                user_content_parts.append(text_content)
-                # Add to Gradio history for display
-                history.append({
-                    "role": "user", 
-                    "content": text_content
-                })
-            
-            # Add to conversation manager (combine file and text content)
-            if user_content_parts:
-                combined_content = "\n".join(user_content_parts)
-                conversation_manager.add_user_message(combined_content)
-                logger.info(f"Added user message to conversation. {conversation_manager.get_history_summary()}")
-                
-            return history, gr.MultimodalTextbox(value=None, interactive=False)
-            
-        except Exception as e:
-            logger.error(f"Error adding message: {str(e)}")
-            # Add error message to history
-            history.append({
-                "role": "assistant", 
-                "content": "Sorry, there was an error processing your message. Please try again."
-            })
-            return history, gr.MultimodalTextbox(value=None, interactive=False)
 
     @staticmethod
     def bot_with_real_streaming(
