@@ -24,10 +24,10 @@ class UIComponents:
     @staticmethod
     def create_model_selection_section() -> tuple:
         """
-        Create the model selection section with dropdown and controls.
+        Create the model selection section with dropdown.
         
         Returns:
-            Tuple of (model_dropdown, model_filter, selected_model, model_info_display)
+            Tuple of (model_dropdown, selected_model)
         """
         with gr.Column():
             gr.Markdown("### 🤖 AI Model Selection")
@@ -95,13 +95,6 @@ class UIComponents:
                 elem_classes=["model-dropdown"]
             )
             
-            # Dummy filter dropdown for compatibility (hidden)
-            model_filter = gr.Dropdown(
-                choices=["All Models"],
-                value="All Models",
-                visible=False
-            )
-            
             # Hidden component to manage selection (for compatibility)
             selected_model = gr.Textbox(
                 value="gpt-4o-mini",
@@ -109,14 +102,7 @@ class UIComponents:
                 label="Selected Model"
             )
         
-        # Hidden model info display (for compatibility with existing handlers)
-        model_info_display = gr.Markdown(
-            value="",
-            visible=False,
-            elem_classes=["model-info"]
-        )
-        
-        return model_dropdown, model_filter, selected_model, model_info_display
+        return model_dropdown, selected_model
     
     @staticmethod
     def create_chatbot() -> gr.Chatbot:

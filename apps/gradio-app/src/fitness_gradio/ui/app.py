@@ -33,8 +33,7 @@ class FitnessAppUI:
             
             # Model selection section
             with gr.Row():
-                (model_dropdown, model_filter, 
-                 selected_model, model_info_display) = UIComponents.create_model_selection_section()
+                (model_dropdown, selected_model) = UIComponents.create_model_selection_section()
             
             # Main chat interface
             chatbot = UIComponents.create_chatbot()
@@ -53,7 +52,7 @@ class FitnessAppUI:
             # Event handlers
             self._setup_event_handlers(
                 chatbot, chat_input, clear_btn, streaming_toggle,
-                model_dropdown, model_filter, selected_model, model_info_display
+                model_dropdown, selected_model
             )
     
     def _setup_event_handlers(
@@ -63,9 +62,7 @@ class FitnessAppUI:
         clear_btn: gr.Button,
         streaming_toggle: gr.Checkbox,
         model_dropdown: gr.Dropdown,
-        model_filter: gr.Dropdown,
-        selected_model: gr.Textbox,
-        model_info_display: gr.Markdown
+        selected_model: gr.Textbox
     ) -> None:
         """Set up all event handlers."""
         
@@ -87,7 +84,7 @@ class FitnessAppUI:
         model_dropdown.change(
             UIHandlers.select_model_from_dropdown,
             inputs=[model_dropdown],
-            outputs=[selected_model, model_info_display]
+            outputs=[selected_model]
         )
 
         # Clear conversation handler

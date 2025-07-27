@@ -104,20 +104,19 @@ Please check your API keys and try a different model."""
             return f"❌ **Unexpected Error:** {str(e)}"
 
     @staticmethod
-    def select_model_from_dropdown(selected_model: str) -> Tuple[str, str]:
+    def select_model_from_dropdown(selected_model: str) -> str:
         """Handle model selection from dropdown"""
         try:
             # Ignore header selections (None values) and empty selections
             if not selected_model or selected_model is None:
-                return "", ""
+                return ""
             
-            # Since we removed the model info display, just return the selected model
-            # The dropdown itself will show the current selection
-            return selected_model, ""
+            # Return the selected model
+            return selected_model
             
         except Exception as e:
             logger.error(f"Error selecting model from dropdown: {str(e)}")
-            return selected_model or "", ""
+            return selected_model or ""
 
     @staticmethod
     def print_like_dislike(x: gr.LikeData) -> None:
