@@ -113,16 +113,31 @@ def change_model(new_model: str) -> str:
         
         # Test if we can create an agent with this model (basic validation)
         try:
+            logger.info(f"Attempting to create test agent with model: {new_model}")
             test_agent = FitnessAgent(new_model)
+            logger.info(f"Successfully created test agent with model: {new_model}")
             # If we get here, the model is likely available
         except Exception as model_error:
-            # Check if it's a "not found" error specifically
+            # Get the full error details for debugging
             error_str = str(model_error)
-            if "not_found_error" in error_str or "NotFoundError" in error_str:
+            error_repr = repr(model_error)
+            error_type = type(model_error).__name__
+            
+            logger.error(f"Model initialization error for {new_model}:")
+            logger.error(f"  Error type: {error_type}")
+            logger.error(f"  Error string: {error_str}")
+            logger.error(f"  Error repr: {error_repr}")
+            
+            # Clean up error message for display
+            clean_error = error_str.replace('\n', ' ').replace('\r', ' ')
+            clean_error = clean_error[:400] + "..." if len(clean_error) > 400 else clean_error
+            
+            # Check for specific error types
+            if "not_found_error" in error_str.lower() or "notfounderror" in error_str.lower():
                 recommended = ", ".join(FitnessAgent.get_recommended_models())
                 return f"""❌ **Model Not Available**
 
-🚫 **Error:** Model `{new_model}` is not currently available on your Anthropic API account.
+🚫 **Error:** Model `{new_model}` is not currently available on your API account.
 
 💡 **This could mean:**
 - The model requires special access or higher tier subscription
@@ -133,14 +148,34 @@ def change_model(new_model: str) -> str:
 {recommended}
 
 🔧 **Current Model:** `{current_model}` (unchanged)"""
+            elif "api" in error_str.lower() and "key" in error_str.lower():
+                return f"""❌ **API Configuration Error**
+
+🚫 **Error:** There seems to be an issue with your Anthropic API configuration.
+
+💡 **Please check:**
+- Your ANTHROPIC_API_KEY environment variable is set
+- Your API key is valid and has the necessary permissions
+- Your account has access to the requested model
+
+📝 **Error Details:** {clean_error}
+
+🔧 **Current Model:** `{current_model}` (unchanged)
+
+💡 **Tip:** Try using an OpenAI model if Anthropic models are not working."""
             else:
                 return f"""❌ **Model Error**
 
 🚫 **Error:** Failed to initialize model `{new_model}`
 
-📝 **Details:** {str(model_error)}
+📝 **Error Type:** {error_type}
+📝 **Details:** {clean_error}
 
-🔧 **Current Model:** `{current_model}` (unchanged)"""
+🔧 **Current Model:** `{current_model}` (unchanged)
+
+💡 **Debugging Info:**
+- Provider: {"Anthropic" if "claude" in new_model else "OpenAI" if any(x in new_model for x in ["gpt", "o1", "o3"]) else "Unknown"}
+- Try using a different model or check your API configuration"""
         
         # Reset agent to force recreation with new model
         current_agent = None
@@ -163,6 +198,83 @@ def change_model(new_model: str) -> str:
         return f"❌ **Unexpected Error:** {str(e)}"
 
 
+def filter_model_table(filter_choice: str) -> list:
+    """Filter the model table based on user selection."""
+    all_data = FitnessAgent.get_models_table_data()
+    
+    if filter_choice == "🔵 Anthropic Only":
+        return [row for row in all_data if "🔵 Anthropic" in row[1]]
+    elif filter_choice == "🟢 OpenAI Only":
+        return [row for row in all_data if "🟢 OpenAI" in row[1]]
+    elif filter_choice == "⭐ Recommended Only":
+        return [row for row in all_data if row[0] == "⭐"]
+    else:  # All Models
+        return all_data
+
+
+def select_model_from_table(table_data, evt: gr.SelectData):
+    """Select a model from the table"""
+    try:
+        if evt is None:
+            return "", "Please select a model from the table"
+        
+        # Get the selected row index
+        row_index = evt.index[0] if evt.index else 0
+        
+        # Handle both DataFrame and list formats
+        try:
+            # Try pandas DataFrame access first
+            if hasattr(table_data, 'iloc') and row_index < len(table_data):
+                row = table_data.iloc[row_index]
+                if len(row) >= 7:
+                    rating = row.iloc[0]  # Recommendation star
+                    provider = row.iloc[1]  # Provider
+                    selected_model = row.iloc[2]  # Model name
+                    capability = row.iloc[3]  # Capability rating
+                    speed = row.iloc[4]  # Speed rating
+                    cost = row.iloc[5]  # Cost rating
+                    description = row.iloc[6]  # Description
+                else:
+                    return "", "Invalid table row - insufficient columns"
+            # Fall back to list access
+            elif isinstance(table_data, list) and row_index < len(table_data) and len(table_data[row_index]) >= 7:
+                rating = table_data[row_index][0]  # Recommendation star
+                provider = table_data[row_index][1]  # Provider
+                selected_model = table_data[row_index][2]  # Model name
+                capability = table_data[row_index][3]  # Capability rating
+                speed = table_data[row_index][4]  # Speed rating
+                cost = table_data[row_index][5]  # Cost rating
+                description = table_data[row_index][6]  # Description
+            else:
+                return "", "Invalid selection - please try clicking on a model row"
+                
+        except (IndexError, KeyError) as data_error:
+            logger.error(f"Data access error: {str(data_error)} - Table type: {type(table_data)}, Row index: {row_index}")
+            return "", "Error accessing table data - please try again"
+        
+        # Update the model and get the change result
+        change_result = change_model(selected_model)
+        
+        if "✅" in change_result:
+            model_info = f"""✅ **Model Successfully Selected!**
+
+🤖 **Current Model:** `{selected_model}`
+{provider}
+**Capability:** {capability} | **Speed:** {speed} | **Cost:** {cost}
+
+💡 **Description:** {description}
+
+📊 **Status:** Ready to chat with the new model!"""
+        else:
+            model_info = change_result  # Show the error message
+        
+        return selected_model, model_info
+        
+    except Exception as e:
+        logger.error(f"Error in select_model_from_table: {str(e)} - Table type: {type(table_data)}, Row index: {row_index if 'row_index' in locals() else 'unknown'}")
+        return "", f"Error selecting model: {str(e)}"
+
+
 def update_model_and_display(selected_model: str) -> str:
     """
     Update both the model and the display when dropdown selection changes
@@ -174,10 +286,16 @@ def update_model_and_display(selected_model: str) -> str:
         Formatted model information
     """
     # Ignore separator selections
-    if selected_model == "--- Legacy/Experimental ---":
-        return """⚠️ **Please select a specific model**
+    separators = [
+        "--- Anthropic Models ---", 
+        "--- OpenAI Models ---", 
+        "--- Other Models ---",
+        "--- Legacy/Experimental ---"
+    ]
+    if selected_model in separators:
+        return f"""⚠️ **Please select a specific model**
 
-The separator "--- Legacy/Experimental ---" is not a valid model choice.
+The separator "{selected_model}" is not a valid model choice.
 
 Please choose one of the actual model names from the dropdown."""
     
@@ -188,7 +306,11 @@ Please choose one of the actual model names from the dropdown."""
     if "✅" in change_result:
         try:
             model_info = FitnessAgent.get_model_info(selected_model)
-            return f"""🤖 **Current Model:** `{selected_model}`
+            
+            # Determine provider emoji
+            provider_emoji = "🔵" if "claude" in selected_model else "🟢" if any(x in selected_model for x in ["gpt", "o1", "o3"]) else "⚪"
+            
+            return f"""{provider_emoji} **Current Model:** `{selected_model}`
 
 💡 **Description:** {model_info}
 
@@ -944,27 +1066,41 @@ with gr.Blocks(
     
     # Model selection section
     with gr.Row():
-        with gr.Column(scale=1):
-            # Get available models for dropdown - prioritize recommended models
-            all_models = FitnessAgent.list_supported_models()
-            recommended_models = FitnessAgent.get_recommended_models()
+        with gr.Column():
+            gr.Markdown("### 🤖 AI Model Selection")
+            gr.Markdown("Browse and select your preferred AI model. Click on a row to select it.")
             
-            # Create choices list with recommended models first, then others
-            other_models = [m for m in all_models.keys() if m not in recommended_models]
-            model_choices = recommended_models + ["--- Legacy/Experimental ---"] + other_models
+            # Create model table data
+            table_data = FitnessAgent.get_models_table_data()
             
-            model_dropdown = gr.Dropdown(
-                choices=model_choices,
-                value="claude-3.5-haiku",  # Updated default model
-                label="🤖 AI Model",
-                info="Choose which Anthropic model to use (recommended models listed first)",
-                interactive=True,
-                elem_classes=["model-dropdown"]
+            model_table = gr.DataFrame(
+                value=table_data,
+                headers=["⭐", "Provider", "Model Name", "Capability", "Speed", "Cost", "Description"],
+                datatype=["str", "str", "str", "str", "str", "str", "str"],
+                interactive=False,
+                wrap=True,
+                elem_classes=["model-table"]
             )
+            
+            # Hidden components to manage selection
+            selected_model = gr.Textbox(
+                value="claude-3.5-haiku",
+                visible=False,
+                label="Selected Model"
+            )
+            
+            # Model selection button
+            with gr.Row():
+                model_filter = gr.Dropdown(
+                    choices=["All Models", "🔵 Anthropic Only", "🟢 OpenAI Only", "⭐ Recommended Only"],
+                    value="All Models",
+                    label="Filter Models",
+                    scale=3
+                )
     
     # Model information display
     model_info_display = gr.Markdown(
-        value=f"""🤖 **Current Model:** `claude-3.5-haiku`
+        value=f"""🔵 **Current Model:** `claude-3.5-haiku`
 
 💡 **Description:** {FitnessAgent.get_model_info('claude-3.5-haiku')}
 
@@ -1032,11 +1168,14 @@ with gr.Blocks(
         - Let me know about any injuries or limitations
         
         **AI Model Selection:**
-        - **Claude-4 Models**: Most capable, best for complex reasoning and detailed plans (higher cost)
-        - **Claude-3.5/3.7**: Excellent balance of capability and speed (recommended for most users)
-        - **Claude-3 Haiku**: Fastest and most cost-effective (good for simple questions)
-        - **Claude-2/Instant**: Previous generation models (basic functionality)
+        - **🔵 Anthropic Claude Models**: Excellent for detailed reasoning and analysis
+          - Claude-4: Most capable (premium), Claude-3.7: Extended thinking
+          - Claude-3.5: Balanced performance, Claude-3: Fast and cost-effective
+        - **🟢 OpenAI GPT Models**: Great for general tasks and familiar interface
+          - GPT-4o: Latest with vision, GPT-4 Turbo: Large context window
+          - GPT-3.5: Fast and economical, o1/o3: Advanced reasoning
         - You can change models anytime - the conversation continues seamlessly
+        - Mix and match providers based on your preferences
         
         **Conversation Management:**
         - The assistant remembers our entire conversation
@@ -1054,24 +1193,40 @@ with gr.Blocks(
     
     # Add model comparison section
     with gr.Accordion("🤖 Model Comparison Guide", open=False):
-        model_comparison = "| Model | Capability | Speed | Cost | Best For |\n"
-        model_comparison += "|-------|------------|--------|------|----------|\n"
+        gr.Markdown("""
+        ## 🔵 Anthropic Claude Models
         
-        models_info = {
-            "claude-4-opus": ("★★★★★", "★★★☆☆", "★★★★★", "Complex analysis, detailed plans"),
-            "claude-4-sonnet": ("★★★★☆", "★★★★☆", "★★★★☆", "Balanced performance"),
-            "claude-3.7-sonnet": ("★★★★☆", "★★★★☆", "★★★☆☆", "Enhanced capabilities"),
-            "claude-3.5-sonnet": ("★★★★☆", "★★★★☆", "★★★☆☆", "General use, balanced"),
-            "claude-3-opus": ("★★★★☆", "★★★☆☆", "★★★★☆", "Complex tasks"),
-            "claude-3-sonnet": ("★★★☆☆", "★★★★☆", "★★★☆☆", "Standard tasks"),
-            "claude-3-haiku": ("★★★☆☆", "★★★★★", "★★☆☆☆", "Quick questions, cost-effective"),
-            "claude-2.1": ("★★☆☆☆", "★★★★☆", "★★☆☆☆", "Basic functionality"),
-        }
+        | Model | Capability | Speed | Cost | Best For |
+        |-------|------------|--------|------|----------|
+        | claude-4-opus | ★★★★★ | ★★★☆☆ | ★★★★★ | Complex analysis, detailed plans |
+        | claude-4-sonnet | ★★★★☆ | ★★★★☆ | ★★★★☆ | Balanced high performance |
+        | claude-3.7-sonnet | ★★★★☆ | ★★★★☆ | ★★★☆☆ | Extended thinking, complex tasks |
+        | claude-3.5-sonnet | ★★★★☆ | ★★★★☆ | ★★★☆☆ | General use, balanced |
+        | claude-3.5-haiku | ★★★☆☆ | ★★★★★ | ★★☆☆☆ | **DEFAULT** - Fast responses |
+        | claude-3-haiku | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Most cost-effective |
         
-        for model, (capability, speed, cost, best_for) in models_info.items():
-            model_comparison += f"| {model} | {capability} | {speed} | {cost} | {best_for} |\n"
+        ## 🟢 OpenAI GPT Models
         
-        gr.Markdown(model_comparison)
+        | Model | Capability | Speed | Cost | Best For |
+        |-------|------------|--------|------|----------|
+        | gpt-4o | ★★★★★ | ★★★★☆ | ★★★★☆ | Latest features, vision support |
+        | gpt-4o-mini | ★★★★☆ | ★★★★★ | ★★☆☆☆ | Balanced performance, affordable |
+        | gpt-4-turbo | ★★★★☆ | ★★★★☆ | ★★★★☆ | Large context, reliable |
+        | gpt-3.5-turbo | ★★★☆☆ | ★★★★★ | ★☆☆☆☆ | Fast and economical |
+        | o1-preview | ★★★★★ | ★★☆☆☆ | ★★★★★ | Advanced reasoning |
+        | o1-mini | ★★★★☆ | ★★★☆☆ | ★★★☆☆ | Reasoning tasks |
+        | o3-mini | ★★★★☆ | ★★★★☆ | ★★★☆☆ | Latest reasoning model |
+        
+        ### 💡 Provider Comparison
+        - **🔵 Anthropic**: Excellent for detailed analysis, safety-focused, great for complex fitness planning
+        - **🟢 OpenAI**: Familiar interface, good general performance, strong tool usage
+        
+        ### 🎯 Recommendations by Use Case
+        - **Quick questions**: claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo
+        - **Comprehensive plans**: claude-3.5-sonnet, gpt-4o, claude-3.7-sonnet
+        - **Complex analysis**: claude-4-opus, gpt-4o, o1-preview
+        - **Budget-conscious**: claude-3-haiku, gpt-3.5-turbo, gpt-4o-mini
+        """)
 
     # Event handlers
     chat_msg = chat_input.submit(
@@ -1079,17 +1234,24 @@ with gr.Blocks(
     )
     bot_msg = chat_msg.then(
         dynamic_bot, 
-        [chatbot, streaming_toggle, model_dropdown], 
+        [chatbot, streaming_toggle, selected_model], 
         chatbot, 
         api_name="bot_response"
     )
     bot_msg.then(lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input])
 
-    # Update model and display when dropdown selection changes
-    model_dropdown.change(
-        update_model_and_display,
-        inputs=[model_dropdown],
-        outputs=[model_info_display]
+    # Model table filtering
+    model_filter.change(
+        filter_model_table,
+        inputs=[model_filter],
+        outputs=[model_table]
+    )
+    
+    # Model selection from table
+    model_table.select(
+        select_model_from_table,
+        inputs=[model_table],
+        outputs=[selected_model, model_info_display]
     )
 
     # Clear conversation handler
