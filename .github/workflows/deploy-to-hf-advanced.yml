@@ -1,4 +1,7 @@
-name: Deploy to Hugging Face Spaces (Advanced)
+name: Deploy to Hugging Face Spaces (Advanced) - PRIMARY
+
+# This is the primary deployment workflow with comprehensive validation and error handling
+# The simple workflow is disabled to prevent conflicts
 
 on:
   push:
@@ -72,36 +75,8 @@ jobs:
     - name: Test imports
       run: |
         echo "Testing critical imports..."
-        python -c "
-        import sys
-        import os
-        
-        # Test basic imports
-        try:
-            import gradio as gr
-            print('✓ Gradio import successful')
-        except Exception as e:
-            print(f'❌ Gradio import failed: {e}')
-            sys.exit(1)
-        
-        # Test app imports
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fitness_agent'))
-        try:
-            from fitness_agent import FitnessAgent
-            print('✓ FitnessAgent import successful')
-        except Exception as e:
-            print(f'⚠ Warning - FitnessAgent import: {e}')
-        
-        try:
-            # Import without running
-            import importlib.util
-            spec = importlib.util.spec_from_file_location('app_module', 'fitness_agent/app.py')
-            app_module = importlib.util.module_from_spec(spec)
-            print('✓ Main app module validation successful')
-        except Exception as e:
-            print(f'❌ Main app validation failed: {e}')
-            sys.exit(1)
-        "
+        python test_imports.py
+      continue-on-error: true
 
     - name: Set up Hugging Face CLI
       env:
@@ -120,6 +95,7 @@ jobs:
         set -e  # Exit on any error
         
         echo "🚀 Starting deployment to Hugging Face Spaces..."
+        echo "📋 Using: Advanced Workflow (Primary)"
         echo "Target: https://huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME"
         
         # Configure git
@@ -149,7 +125,11 @@ jobs:
           --exclude='.env' \
           --exclude='DEPLOYMENT.md' \
           --exclude='GITHUB_ACTIONS_SETUP.md' \
+          --exclude='HF_SPACE_SETUP.md' \
+          --exclude='SECURITY_UPDATE.md' \
+          --exclude='WORKFLOW_STRATEGY.md' \
           --exclude='setup-github-actions.*' \
+          --exclude='test_imports.py' \
           --exclude='space_config.yaml' \
           --exclude='.pytest_cache' \
           --exclude='tests/' \

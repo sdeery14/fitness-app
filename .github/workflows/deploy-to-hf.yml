@@ -1,16 +1,21 @@
-name: Deploy to Hugging Face Spaces
+name: Deploy to Hugging Face Spaces (Simple) - DISABLED
+
+# This workflow is disabled to prevent conflicts with the advanced workflow
+# To re-enable, change "workflow_dispatch" back to the original triggers
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-    types: [ closed ]
+  workflow_dispatch:
+    inputs:
+      enable_simple_deploy:
+        description: 'Enable simple deployment (use only if advanced workflow fails)'
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: github.event.inputs.enable_simple_deploy == 'true'
     
     steps:
     - name: Checkout repository
@@ -61,7 +66,7 @@ jobs:
         
         # Copy files to the HF space directory (excluding .git)
         echo "Copying files to Hugging Face Space..."
-        rsync -av --exclude='.git' --exclude='hf-space' --exclude='.github' --exclude='__pycache__' --exclude='setup-github-actions.*' --exclude='space_config.yaml' . hf-space/
+        rsync -av --exclude='.git' --exclude='hf-space' --exclude='.github' --exclude='__pycache__' --exclude='setup-github-actions.*' --exclude='test_imports.py' --exclude='*_SETUP.md' --exclude='*_UPDATE.md' --exclude='WORKFLOW_STRATEGY.md' --exclude='space_config.yaml' . hf-space/
         
         # Navigate to HF space directory
         cd hf-space
