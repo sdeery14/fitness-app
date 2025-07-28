@@ -36,16 +36,17 @@ class FitnessAppUI:
                 (model_dropdown, selected_model) = UIComponents.create_model_selection_section()
             
             # Main chat interface
-            with gr.Row():
-                with gr.Column():
-                    chatbot = UIComponents.create_chatbot()
-                with gr.Column(scale=0.3):
-                    output_audio = UIComponents.create_output_audio()
+            chatbot = UIComponents.create_chatbot()
             
             chat_input = UIComponents.create_chat_input()
             
             # Control buttons
             clear_btn, streaming_toggle, tts_toggle = UIComponents.create_control_buttons()
+            
+            # Audio response (positioned near TTS controls)
+            with gr.Row():
+                with gr.Column():
+                    output_audio = UIComponents.create_output_audio()
             
             # Examples section
             UIComponents.create_examples_section(chat_input)
@@ -97,6 +98,13 @@ class FitnessAppUI:
 
         # Clear conversation handler
         clear_btn.click(UIHandlers.clear_conversation, None, chatbot)
+
+        # TTS toggle handler to show/hide audio component
+        tts_toggle.change(
+            UIHandlers.toggle_audio_visibility,
+            inputs=[tts_toggle],
+            outputs=[output_audio]
+        )
 
         # Like/dislike feedback
         chatbot.like(UIHandlers.print_like_dislike, None, None, like_user_message=True)

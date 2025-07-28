@@ -167,7 +167,8 @@ class UIComponents:
             autoplay=True,
             show_download_button=True,
             show_share_button=False,
-            format="wav"  # Explicitly set format to WAV
+            format="wav",  # Explicitly set format to WAV
+            visible=False  # Initially hidden, will show when TTS is enabled
         )
     
     @staticmethod

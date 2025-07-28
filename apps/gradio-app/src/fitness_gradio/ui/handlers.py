@@ -482,6 +482,19 @@ Please check your API keys and try a different model."""
         return []
 
     @staticmethod
+    def toggle_audio_visibility(tts_enabled: bool) -> gr.Audio:
+        """
+        Toggle the visibility of the audio component based on TTS setting.
+        
+        Args:
+            tts_enabled: Whether TTS is enabled
+            
+        Returns:
+            Updated audio component with appropriate visibility
+        """
+        return gr.Audio(visible=tts_enabled)
+
+    @staticmethod
     def _generate_tts_for_response_sync(text: str) -> Optional[str]:
         """
         Generate TTS audio for a response text synchronously.
