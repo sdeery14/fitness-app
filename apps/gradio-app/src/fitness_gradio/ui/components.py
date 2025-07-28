@@ -130,7 +130,7 @@ class UIComponents:
             # Main model selection dropdown (full width)
             model_dropdown = gr.Dropdown(
                 choices=dropdown_choices,
-                value="gpt-4o-mini",
+                value="claude-3.5-haiku",
                 label="Select AI Model",
                 info="Choose your preferred AI model for fitness guidance",
                 elem_classes=["model-dropdown"]
@@ -138,7 +138,7 @@ class UIComponents:
             
             # Hidden component to manage selection (for compatibility)
             selected_model = gr.Textbox(
-                value="gpt-4o-mini",
+                value="claude-3.5-haiku",
                 visible=False,
                 label="Selected Model"
             )

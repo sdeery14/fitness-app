@@ -363,15 +363,15 @@ class ModelProvider:
                 os.getenv("ANTHROPIC_MODEL") or 
                 os.getenv("OPENAI_MODEL") or 
                 os.getenv("GROQ_MODEL") or
-                "gpt-4o-mini"  # Default fallback - reliable OpenAI model
+                "claude-3.5-haiku"  # Default fallback - new fast model for near-instant responsiveness
             )
         
         # Validate the model name
         is_valid, validation_message = cls.validate_model_name(model_name)
         if not is_valid:
             print(f"Warning: {validation_message}")
-            print(f"Falling back to default model: gpt-4o-mini")
-            model_name = "gpt-4o-mini"
+            print(f"Falling back to default model: claude-3.5-haiku")
+            model_name = "claude-3.5-haiku"
         
         return model_name
 
