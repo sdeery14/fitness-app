@@ -9,6 +9,7 @@ from typing import List, Dict, Union, Generator, Any, Tuple, Optional
 from fitness_core.agents import FitnessAgent
 from fitness_core.services import ConversationManager, AgentRunner, ResponseFormatter
 from fitness_core.utils import get_logger
+from .tts_utils import generate_speech_for_text, generate_speech_for_session, clean_tts_markup
 
 logger = get_logger(__name__)
 
@@ -137,60 +138,100 @@ Please check your API keys and try a different model."""
             Tuple of (updated_history, cleared_input)
         """
         try:
+            logger.info(f"Processing message: {message}")
             user_content_parts = []
+            has_audio_content = False
+            audio_transcription = None
             
             # Handle file uploads (including audio from microphone)
             if message.get("files"):
+                logger.info(f"Found {len(message['files'])} files in message")
                 for file_path in message["files"]:
                     if file_path:  # Validate file path exists
+                        logger.info(f"Processing file: {file_path}")
                         # Check if this is an audio file (from microphone recording)
                         if UIHandlers.is_audio_file(file_path):
-                            logger.info(f"Processing audio file: {file_path}")
+                            logger.info(f"Detected audio file: {file_path}")
                             # Process audio file for transcription
                             transcribed_text = UIHandlers.process_audio_file(file_path)
                             
                             if transcribed_text and not transcribed_text.startswith("["):
-                                # Add voice message indicator to the text
-                                display_text = f"🎤 {transcribed_text}"
+                                audio_transcription = transcribed_text
                                 user_content_parts.append(transcribed_text)  # Add clean text to conversation
-                                
-                                # Add to Gradio history for display
-                                history.append({
-                                    "role": "user", 
-                                    "content": display_text
-                                })
+                                has_audio_content = True
+                                logger.info(f"Successfully transcribed audio: '{transcribed_text[:50]}...'")
                             else:
-                                # Show transcription error
-                                history.append({
-                                    "role": "user", 
-                                    "content": f"🎤 {transcribed_text}"
-                                })
+                                # Handle transcription error
+                                audio_transcription = transcribed_text
+                                has_audio_content = True  # Still mark as audio content even if failed
+                                logger.warning(f"Audio transcription failed: {transcribed_text}")
                         else:
                             # Handle non-audio file uploads
                             file_content = f"[File uploaded: {file_path}]"
                             user_content_parts.append(file_content)
-                            # Add to Gradio history for display
-                            history.append({
-                                "role": "user", 
-                                "content": {"path": file_path}
-                            })
+                            logger.info(f"Added file upload to content: {file_path}")
+            else:
+                logger.info("No files found in message")
             
             # Handle text input
+            text_content = None
             if message.get("text") and message["text"].strip():
                 text_content = message["text"].strip()
                 user_content_parts.append(text_content)
-                # Add to Gradio history for display
+                logger.info(f"Found text content: '{text_content[:50]}...'")
+            else:
+                logger.info("No text content found in message")
+            
+            # Add appropriate message to chat history
+            if has_audio_content and audio_transcription:
+                if audio_transcription.startswith("["):
+                    # Transcription error - show error message
+                    display_text = f"🎤 {audio_transcription}"
+                else:
+                    # Successful transcription - show with microphone icon
+                    display_text = f"🎤 {audio_transcription}"
+                
                 history.append({
-                    "role": "user", 
+                    "role": "user",
+                    "content": display_text
+                })
+                logger.info(f"Added audio message to chat history: '{display_text}'")
+                
+                # If there's also text content, add it separately
+                if text_content:
+                    history.append({
+                        "role": "user",
+                        "content": text_content
+                    })
+                    logger.info(f"Added additional text content to history: '{text_content[:50]}...'")
+                    
+            elif text_content:
+                # Only text content, no audio
+                history.append({
+                    "role": "user",
                     "content": text_content
                 })
+                logger.info(f"Added text-only message to chat history: '{text_content[:50]}...'")
+                
+            elif message.get("files") and not has_audio_content:
+                # File uploads that aren't audio
+                for file_path in message["files"]:
+                    if file_path and not UIHandlers.is_audio_file(file_path):
+                        history.append({
+                            "role": "user",
+                            "content": {"path": file_path}
+                        })
+                        logger.info(f"Added file upload to history: {file_path}")
             
             # Add to conversation manager (combine all content)
             if user_content_parts:
                 combined_content = "\n".join(user_content_parts)
                 conversation_manager.add_user_message(combined_content)
-                logger.info(f"Added user message to conversation. {conversation_manager.get_history_summary()}")
+                logger.info(f"Added user message to conversation manager. Content parts: {len(user_content_parts)}, Combined: '{combined_content[:100]}...', {conversation_manager.get_history_summary()}")
+            else:
+                logger.warning("No user content parts found in message - this may indicate an issue")
                 
+            logger.info(f"Final history length: {len(history)}")
             return history, gr.MultimodalTextbox(value=None, interactive=False)
             
         except Exception as e:
@@ -264,17 +305,19 @@ Please check your API keys and try a different model."""
     @staticmethod
     def bot_with_real_streaming(
         history: List[Dict], 
-        model_name: str = None
-    ) -> Generator[List[Dict], None, None]:
+        model_name: str = None,
+        use_tts: bool = False
+    ) -> Generator[Tuple[List[Dict], Optional[str]], None, None]:
         """
         Bot function with real-time streaming from the agent
         
         Args:
             history: Current Gradio chat history (for display only)
             model_name: Model to use for the agent
+            use_tts: Whether to generate text-to-speech for the response
             
         Yields:
-            Updated history with real-time streaming response
+            Tuple of (Updated history, audio_file_path or None)
         """
         try:
             # Get agent instance with specified model
@@ -294,15 +337,18 @@ Please check your API keys and try a different model."""
             try:
                 content_chunks = []
                 final_result = None
+                final_content = ""
                 
                 for chunk in AgentRunner.run_agent_with_streaming_sync(agent, agent_input):
                     if chunk['type'] == 'final_result':
                         final_result = chunk['result']
                         if chunk['content']:
                             content_chunks.append(chunk['content'])
+                            final_content = chunk['content']
                     elif chunk['type'] == 'error':
                         final_result = chunk['result']
                         content_chunks.append(chunk['content'])
+                        final_content = chunk['content']
                 
                 # Update conversation manager
                 if final_result:
@@ -313,34 +359,50 @@ Please check your API keys and try a different model."""
                 if content_chunks:
                     for content in content_chunks:
                         history[-1]["content"] = content
-                        yield history
+                        yield history, None  # No audio during streaming
+                        final_content = content
+                    
+                    # Generate TTS for the final response if enabled
+                    if use_tts and final_content:
+                        audio_file = UIHandlers._generate_tts_for_response_sync(final_content)
+                        if audio_file:
+                            # Return the final history with the audio file
+                            yield history, audio_file
+                        else:
+                            yield history, None
+                    else:
+                        yield history, None
+                        
                 else:
-                    history[-1]["content"] = "I apologize, but I didn't receive a response. Please try again."
-                    yield history
+                    error_msg = "I apologize, but I didn't receive a response. Please try again."
+                    history[-1]["content"] = error_msg
+                    yield history, None
                     
             except Exception as e:
                 logger.error(f"Error in streaming execution: {str(e)}")
-                history[-1]["content"] = f"Sorry, I encountered an error while processing your request: {str(e)}"
-                yield history
+                error_msg = f"Sorry, I encountered an error while processing your request: {str(e)}"
+                history[-1]["content"] = error_msg
+                yield history, None
             
         except Exception as e:
             logger.error(f"Bot streaming function error: {str(e)}")
             if len(history) == 0 or history[-1].get("role") != "assistant":
                 history.append({"role": "assistant", "content": ""})
             history[-1]["content"] = "I apologize, but I'm experiencing technical difficulties. Please try again in a moment."
-            yield history
+            yield history, None
 
     @staticmethod
-    def bot(history: List[Dict], model_name: str = None) -> Generator[List[Dict], None, None]:
+    def bot(history: List[Dict], model_name: str = None, use_tts: bool = False) -> Generator[Tuple[List[Dict], Optional[str]], None, None]:
         """
         Main bot function with simulated streaming
         
         Args:
             history: Current Gradio chat history (for display only)
             model_name: Model to use for the agent
+            use_tts: Whether to generate text-to-speech for the response
             
         Yields:
-            Updated history with bot response
+            Tuple of (Updated history, audio_file_path or None)
         """
         try:
             # Get agent instance with specified model
@@ -361,36 +423,50 @@ Please check your API keys and try a different model."""
             response = ResponseFormatter.extract_response_content(result)
             
             # Stream the response with simulated typing
-            yield from ResponseFormatter.stream_response(response, history)
+            for updated_history in ResponseFormatter.stream_response(response, history):
+                yield updated_history, None  # No audio during streaming
+            
+            # Generate TTS for the final response if enabled
+            if use_tts and response:
+                audio_file = UIHandlers._generate_tts_for_response_sync(response)
+                if audio_file:
+                    yield history, audio_file
+                else:
+                    yield history, None
+            else:
+                yield history, None
             
         except Exception as e:
             logger.error(f"Bot function error: {str(e)}")
             error_response = "I apologize, but I'm experiencing technical difficulties. Please try again in a moment."
-            yield from ResponseFormatter.stream_response(error_response, history)
+            for updated_history in ResponseFormatter.stream_response(error_response, history):
+                yield updated_history, None
 
     @staticmethod
     def dynamic_bot(
         history: List[Dict], 
-        use_real_streaming: bool = True, 
+        use_real_streaming: bool = True,
+        use_tts: bool = False,
         model_name: str = None
-    ) -> Generator[List[Dict], None, None]:
+    ) -> Generator[Tuple[List[Dict], Optional[str]], None, None]:
         """
-        Dynamic bot function that can switch between streaming modes
+        Dynamic bot function that can switch between streaming modes and TTS
         
         Args:
             history: Current Gradio chat history (for display only)
             use_real_streaming: Whether to use real-time streaming from agent
+            use_tts: Whether to generate text-to-speech for the response
             model_name: Model to use for the agent
             
         Yields:
-            Updated history with bot response
+            Tuple of (Updated history, audio_file_path or None)
         """
         if use_real_streaming:
             logger.info("Using real-time streaming mode")
-            yield from UIHandlers.bot_with_real_streaming(history, model_name)
+            yield from UIHandlers.bot_with_real_streaming(history, model_name, use_tts)
         else:
             logger.info("Using simulated streaming mode")
-            yield from UIHandlers.bot(history, model_name)
+            yield from UIHandlers.bot(history, model_name, use_tts)
 
     @staticmethod
     def clear_conversation() -> List[Dict]:
@@ -404,3 +480,41 @@ Please check your API keys and try a different model."""
         conversation_manager.clear_history()
         logger.info("Conversation history cleared")
         return []
+
+    @staticmethod
+    def _generate_tts_for_response_sync(text: str) -> Optional[str]:
+        """
+        Generate TTS audio for a response text synchronously.
+        
+        Args:
+            text: The text to convert to speech
+            
+        Returns:
+            Path to generated audio file or None if error
+        """
+        try:
+            if not text or not text.strip():
+                return None
+            
+            # Clean the text for TTS
+            clean_text = clean_tts_markup(text)
+            
+            # Limit text length for TTS (Groq has 10K char limit)
+            if len(clean_text) > 8000:  # Leave some buffer
+                clean_text = clean_text[:8000] + "..."
+                logger.info(f"Truncated TTS text to 8000 characters")
+            
+            logger.info(f"Generating TTS for response ({len(clean_text)} chars)")
+            
+            # Generate TTS using session persistence
+            audio_file = generate_speech_for_session(clean_text)
+            if audio_file:
+                logger.info(f"TTS audio generated: {audio_file}")
+                return audio_file
+            else:
+                logger.warning("Failed to generate TTS audio")
+                return None
+                
+        except Exception as e:
+            logger.error(f"TTS generation error: {str(e)}")
+            return None

@@ -53,6 +53,30 @@ MAIN_CSS = """
     font-weight: bold;
 }
 
+/* TTS control styling */
+.tts-checkbox {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)) !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    transition: all 0.3s ease !important;
+}
+
+.tts-checkbox:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+.tts-active {
+    animation: pulse-tts 2s infinite;
+}
+
+@keyframes pulse-tts {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
 /* Ensure all text in model-info respects dark theme */
 .model-info * {
     color: inherit !important;
@@ -88,7 +112,9 @@ HELP_CONTENT = """
 **How to interact:**
 - **💬 Type messages** in the text box
 - **🎤 Record voice messages** using the circular microphone button (requires Groq API key)
-- **📎 Upload files** if needed for context
+- **� Enable Text-to-Speech** to hear AI responses spoken aloud (requires Groq API key)
+- **🚀 Enable Real-time Streaming** for faster response display
+- **�📎 Upload files** if needed for context
 
 **To get the best results:**
 - Tell me your fitness level (beginner, intermediate, advanced)
@@ -98,6 +124,12 @@ HELP_CONTENT = """
 
 **Voice Input Setup:**
 - Set your `GROQ_API_KEY` environment variable to enable voice transcription
+
+**Text-to-Speech Setup:**
+- Set your `GROQ_API_KEY` environment variable to enable audio generation
+- Choose from 19 English voices or 4 Arabic voices
+- Audio is automatically generated when TTS is enabled
+- Responses are cleaned of markdown formatting for better speech quality
 - Click the circular microphone icon in the input box and speak your message
 - The system will convert your speech to text automatically using Groq's Whisper
 

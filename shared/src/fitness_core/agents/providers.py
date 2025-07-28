@@ -65,7 +65,10 @@ class ModelProvider:
         # Whisper models (Speech-to-Text)
         "whisper-large-v3": "litellm/groq/whisper-large-v3",                   # Whisper Large v3
         "whisper-large-v3-turbo": "litellm/groq/whisper-large-v3-turbo",       # Whisper Large v3 Turbo
-        "o3-mini": "o3-mini",                                  # Latest reasoning model
+        
+        # PlayAI TTS models (Text-to-Speech)
+        "playai-tts": "litellm/groq/playai-tts",                               # English TTS model
+        "playai-tts-arabic": "litellm/groq/playai-tts-arabic",                 # Arabic TTS model
     }
 
     @classmethod
@@ -102,6 +105,8 @@ class ModelProvider:
             "kimi-k2-instruct": "Moonshot Kimi K2 MoE - 1T parameters with tool use (Moonshot via Groq)",
             "whisper-large-v3": "OpenAI Whisper Large v3 - best speech-to-text (OpenAI via Groq)",
             "whisper-large-v3-turbo": "OpenAI Whisper Large v3 Turbo - faster speech-to-text (OpenAI via Groq)",
+            "playai-tts": "PlayAI English TTS - high-quality text-to-speech with 19 voices (PlayAI via Groq)",
+            "playai-tts-arabic": "PlayAI Arabic TTS - high-quality Arabic text-to-speech with 4 voices (PlayAI via Groq)",
         }
         return model_info.get(model_name, "Model information not available")
 

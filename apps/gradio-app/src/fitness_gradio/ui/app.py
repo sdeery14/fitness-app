@@ -36,11 +36,16 @@ class FitnessAppUI:
                 (model_dropdown, selected_model) = UIComponents.create_model_selection_section()
             
             # Main chat interface
-            chatbot = UIComponents.create_chatbot()
+            with gr.Row():
+                with gr.Column():
+                    chatbot = UIComponents.create_chatbot()
+                with gr.Column(scale=0.3):
+                    output_audio = UIComponents.create_output_audio()
+            
             chat_input = UIComponents.create_chat_input()
             
             # Control buttons
-            clear_btn, streaming_toggle = UIComponents.create_control_buttons()
+            clear_btn, streaming_toggle, tts_toggle = UIComponents.create_control_buttons()
             
             # Examples section
             UIComponents.create_examples_section(chat_input)
@@ -51,8 +56,8 @@ class FitnessAppUI:
             
             # Event handlers
             self._setup_event_handlers(
-                chatbot, chat_input, clear_btn, streaming_toggle,
-                model_dropdown, selected_model
+                chatbot, chat_input, clear_btn, streaming_toggle, tts_toggle,
+                model_dropdown, selected_model, output_audio
             )
     
     def _setup_event_handlers(
@@ -61,8 +66,10 @@ class FitnessAppUI:
         chat_input: gr.MultimodalTextbox,
         clear_btn: gr.Button,
         streaming_toggle: gr.Checkbox,
+        tts_toggle: gr.Checkbox,
         model_dropdown: gr.Dropdown,
-        selected_model: gr.Textbox
+        selected_model: gr.Textbox,
+        output_audio: gr.Audio
     ) -> None:
         """Set up all event handlers."""
         
@@ -70,12 +77,13 @@ class FitnessAppUI:
         chat_msg = chat_input.submit(
             UIHandlers.add_message_with_audio, 
             [chatbot, chat_input], 
-            [chatbot, chat_input]
+            [chatbot, chat_input],
+            queue=False
         )
         bot_msg = chat_msg.then(
             UIHandlers.dynamic_bot, 
-            [chatbot, streaming_toggle, selected_model], 
-            chatbot, 
+            [chatbot, streaming_toggle, tts_toggle, selected_model], 
+            [chatbot, output_audio], 
             api_name="bot_response"
         )
         bot_msg.then(lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input])

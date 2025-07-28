@@ -159,6 +159,18 @@ class UIComponents:
         )
     
     @staticmethod
+    def create_output_audio() -> gr.Audio:
+        """Create the output audio component for TTS responses."""
+        return gr.Audio(
+            label="🔊 Audio Response", 
+            streaming=False,  # Disable streaming to avoid ffmpeg issues
+            autoplay=True,
+            show_download_button=True,
+            show_share_button=False,
+            format="wav"  # Explicitly set format to WAV
+        )
+    
+    @staticmethod
     def create_chat_input() -> gr.MultimodalTextbox:
         """Create the chat input component."""
         return gr.MultimodalTextbox(
@@ -166,16 +178,17 @@ class UIComponents:
             file_count="multiple",
             placeholder="Ask me about fitness, request a workout plan, or get meal planning advice...",
             show_label=False,
-            sources=["microphone", "upload"],  # Re-enable microphone in multimodal for the circular button
+            sources=["microphone", "upload"],  # Enable microphone and file uploads
+            submit_btn=True,  # Ensure submit button is available
         )
     
     @staticmethod
     def create_control_buttons() -> tuple:
         """
-        Create the control buttons (clear, streaming toggle).
+        Create the control buttons (clear, streaming toggle, TTS toggle).
         
         Returns:
-            Tuple of (clear_btn, streaming_toggle)
+            Tuple of (clear_btn, streaming_toggle, tts_toggle)
         """
         with gr.Row():
             clear_btn = gr.Button("🗑️ Clear Conversation", variant="secondary", size="sm")
@@ -184,8 +197,13 @@ class UIComponents:
                 value=True, 
                 info="Stream responses in real-time as the agent generates them"
             )
+            tts_toggle = gr.Checkbox(
+                label="🔊 Enable Text-to-Speech", 
+                value=False, 
+                info="Convert AI responses to speech using Groq's TTS models"
+            )
         
-        return clear_btn, streaming_toggle
+        return clear_btn, streaming_toggle, tts_toggle
     
     @staticmethod
     def create_examples_section(chat_input: gr.MultimodalTextbox) -> gr.Examples:
