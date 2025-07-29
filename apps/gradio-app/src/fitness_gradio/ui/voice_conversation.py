@@ -19,7 +19,7 @@ except ImportError:
 
 from fitness_core.utils import get_logger
 from fitness_core.agents import FitnessAgent
-from fitness_core.services import AgentRunner
+from fitness_core.services import AgentRunner, ConversationManager
 from fitness_core.services.formatters import ResponseFormatter
 from .tts_utils import generate_speech_for_session, clean_tts_markup
 
@@ -29,9 +29,43 @@ logger = get_logger(__name__)
 @dataclass
 class VoiceConversationState:
     """State management for voice conversation."""
-    conversation: List[Dict] = field(default_factory=list)
+    conversation_manager: ConversationManager = field(default_factory=ConversationManager)
     is_active: bool = False
     last_audio_response: Optional[str] = None
+    
+    @property
+    def conversation(self) -> List[Dict]:
+        """Get conversation history as list of dicts for compatibility."""
+        # Ensure all content is strings, not complex objects
+        cleaned_history = []
+        for msg in self.conversation_manager.conversation_history:
+            content = msg.get("content", "")
+            
+            # Extract text from complex objects including RunResult format
+            if isinstance(content, list):
+                # Handle list format like [{'annotations': [], 'text': '...', 'type': 'output_text'}]
+                if content and isinstance(content[0], dict) and 'text' in content[0]:
+                    content = content[0]['text']
+                else:
+                    # Fallback: join list items
+                    content = " ".join(str(item) for item in content)
+            elif isinstance(content, dict):
+                # Handle dict format like {'annotations': [], 'text': '...', 'type': 'output_text'}
+                if 'text' in content:
+                    content = content['text']
+                elif 'content' in content:
+                    content = content['content']
+                else:
+                    content = str(content)
+            elif not isinstance(content, str):
+                content = str(content)
+            
+            cleaned_history.append({
+                "role": msg.get("role", "assistant"),
+                "content": content
+            })
+        
+        return cleaned_history
 
 
 class VoiceConversationManager:
@@ -47,6 +81,43 @@ class VoiceConversationManager:
             raise ValueError("GROQ_API_KEY not found in environment variables")
         
         self.groq_client = Groq(api_key=self.groq_api_key)
+    
+    def _extract_text_from_response(self, response: Any) -> str:
+        """
+        Extract text content from various response formats including RunResult.
+        
+        Args:
+            response: Response object (could be string, dict, list, or other)
+            
+        Returns:
+            Clean text string
+        """
+        if isinstance(response, str):
+            return response
+        elif isinstance(response, list):
+            # Handle list format like [{'annotations': [], 'text': '...', 'type': 'output_text'}]
+            if response and isinstance(response[0], dict) and 'text' in response[0]:
+                return response[0]['text']
+            else:
+                # Fallback: join list items
+                return " ".join(str(item) for item in response)
+        elif isinstance(response, dict):
+            # Handle various dict formats including RunResult format
+            if 'text' in response:
+                return response['text']
+            elif 'content' in response:
+                return response['content']
+            elif 'message' in response:
+                return response['message']
+            else:
+                # Fallback to string representation
+                return str(response)
+        elif hasattr(response, 'text'):
+            return response.text
+        elif hasattr(response, 'content'):
+            return response.content
+        else:
+            return str(response)
     
     def transcribe_audio_with_vad(self, file_name: str) -> Optional[str]:
         """
@@ -97,12 +168,12 @@ class VoiceConversationManager:
         
         return None
     
-    def generate_chat_response(self, conversation_history: List[Dict], model_name: str = None) -> str:
+    def generate_chat_response(self, conversation_manager: ConversationManager, model_name: str = None) -> str:
         """
-        Generate a chat response using the fitness agent.
+        Generate a chat response using the fitness agent and conversation manager.
         
         Args:
-            conversation_history: List of conversation messages
+            conversation_manager: Shared conversation manager instance
             model_name: Model to use for response generation
             
         Returns:
@@ -112,23 +183,36 @@ class VoiceConversationManager:
             # Create a fitness agent for this conversation
             agent = FitnessAgent(model_name or "gpt-4o-mini")
             
-            # Convert conversation history to agent format and get last user message
-            last_user_message = None
-            for msg in reversed(conversation_history):
-                if msg["role"] == "user":
-                    # Remove the microphone emoji if present
-                    content = msg["content"]
-                    if content.startswith("🎤 "):
-                        content = content[2:].strip()
-                    last_user_message = content
-                    break
+            # Get input for agent from conversation manager (same as text chat)
+            agent_input = conversation_manager.get_input_for_agent()
             
-            if last_user_message:
-                # Generate response using the AgentRunner
-                result = AgentRunner.run_agent_safely_sync(agent, last_user_message)
+            if agent_input:
+                # Generate response using the AgentRunner (same as text chat)
+                result = AgentRunner.run_agent_safely_sync(agent, agent_input)
+                logger.info(f"Agent result type: {type(result)}")
+                logger.info(f"Agent result: {result}")
+                
+                # Update conversation manager with result (same as text chat)
+                conversation_manager.update_from_result(result)
+                logger.info(f"Conversation history after update: {conversation_manager.conversation_history}")
+                
+                # Check what's in the last assistant message
+                if conversation_manager.conversation_history:
+                    last_msg = conversation_manager.conversation_history[-1]
+                    logger.info(f"Last message in conversation: {last_msg}")
+                    logger.info(f"Last message content type: {type(last_msg.get('content', 'N/A'))}")
                 
                 # Use the same formatter as text messages
-                return ResponseFormatter.extract_response_content(result)
+                formatted_response = ResponseFormatter.extract_response_content(result)
+                logger.info(f"Formatted response type: {type(formatted_response)}")
+                logger.info(f"Formatted response content: {formatted_response}")
+                
+                # Ensure we return a string - handle various response formats
+                final_response = self._extract_text_from_response(formatted_response)
+                logger.info(f"Final response type: {type(final_response)}")
+                logger.info(f"Final response content: {final_response}")
+                
+                return final_response
             
             return "I'm here to help with your fitness goals. What would you like to know?"
             
@@ -217,29 +301,52 @@ def handle_voice_response(
         transcription = voice_manager.transcribe_audio_with_vad(file_name)
         
         if transcription and not transcription.startswith("Error"):
-            # Add user message to conversation
-            state.conversation.append({"role": "user", "content": f"🎤 {transcription}"})
+            # Add user message to conversation manager (same as text chat)
+            # Remove the microphone emoji if present
+            clean_transcription = transcription
+            if transcription.startswith("🎤 "):
+                clean_transcription = transcription[2:].strip()
+            
+            state.conversation_manager.add_user_message(clean_transcription)
             
             # Update the conversation display
             yield state, state.conversation, None
             
-            # Generate assistant response
+            # Generate assistant response using conversation manager
             assistant_message = voice_manager.generate_chat_response(
-                state.conversation, model_name
+                state.conversation_manager, model_name
             )
             
-            # Add assistant message to conversation
-            state.conversation.append({"role": "assistant", "content": assistant_message})
+            logger.info(f"Assistant message returned from generate_chat_response: type={type(assistant_message)}, content={assistant_message}")
             
+            # The response is already added to conversation_manager by generate_chat_response
             # Update conversation display
+            logger.info(f"About to yield conversation: {state.conversation}")
+            for i, msg in enumerate(state.conversation):
+                logger.info(f"Message {i}: role={msg.get('role')}, content_type={type(msg.get('content'))}, content={str(msg.get('content'))[:100]}...")
             yield state, state.conversation, None
             
             # Generate TTS for the response
             try:
-                clean_text = clean_tts_markup(assistant_message)
+                logger.info(f"Preparing TTS for assistant_message type: {type(assistant_message)}")
+                logger.info(f"Assistant message content: {assistant_message}")
+                
+                # Extract text using the same method as in VoiceConversationManager
+                voice_manager = get_voice_manager()
+                if voice_manager:
+                    tts_text = voice_manager._extract_text_from_response(assistant_message)
+                else:
+                    # Fallback if voice manager is not available
+                    tts_text = str(assistant_message)
+                
+                logger.info(f"Extracted TTS text type: {type(tts_text)}")
+                logger.info(f"Extracted TTS text content: {tts_text[:200]}...")
+                
+                clean_text = clean_tts_markup(tts_text)
                 if len(clean_text) > 8000:
                     clean_text = clean_text[:8000] + "..."
                 
+                logger.info(f"Generating TTS for: {clean_text[:100]}...")
                 audio_file = generate_speech_for_session(clean_text)
                 state.last_audio_response = audio_file
                 
@@ -248,6 +355,8 @@ def handle_voice_response(
                 
             except Exception as tts_error:
                 logger.error(f"TTS error: {tts_error}")
+                logger.error(f"Assistant message type: {type(assistant_message)}")
+                logger.error(f"Assistant message content: {assistant_message}")
                 yield state, state.conversation, None
         
         # Clean up temporary file
@@ -258,26 +367,77 @@ def handle_voice_response(
             
     except Exception as e:
         logger.error(f"Error in voice response handling: {e}")
-        state.conversation.append({
-            "role": "assistant", 
-            "content": "I'm sorry, I had trouble processing your voice input. Please try again."
-        })
+        # Add error message to conversation manager
+        state.conversation_manager.add_assistant_message(
+            "I'm sorry, I had trouble processing your voice input. Please try again."
+        )
         yield state, state.conversation, None
 
 
-def start_voice_conversation() -> Tuple[VoiceConversationState, bool, str]:
+def start_voice_conversation(existing_conversation_manager: ConversationManager = None) -> Tuple[VoiceConversationState, bool, str]:
     """
-    Start a new voice conversation.
+    Start a new voice conversation, optionally with an existing conversation manager.
+    
+    Args:
+        existing_conversation_manager: Optional existing conversation manager to continue from
     
     Returns:
         Tuple of (new_state, status_visible, status_text)
     """
     logger.info("=== STARTING VOICE CONVERSATION ===")
-    state = VoiceConversationState(is_active=True)
+    
+    # Create state with existing conversation manager or new one
+    if existing_conversation_manager:
+        state = VoiceConversationState(
+            conversation_manager=existing_conversation_manager,
+            is_active=True
+        )
+        logger.info(f"Starting voice conversation with existing history ({len(existing_conversation_manager.conversation_history)} messages)")
+    else:
+        state = VoiceConversationState(is_active=True)
+        logger.info("Starting fresh voice conversation")
+    
     status_text = "🎙️ Voice conversation active - Just start talking!"
     logger.info(f"Voice conversation state created: active={state.is_active}")
     logger.info(f"Status text: {status_text}")
     return state, True, status_text
+
+
+def merge_voice_with_main_conversation(
+    voice_state: VoiceConversationState, 
+    main_conversation_manager: ConversationManager
+) -> None:
+    """
+    Merge voice conversation history with the main conversation manager.
+    
+    Args:
+        voice_state: Voice conversation state containing the conversation
+        main_conversation_manager: Main conversation manager to merge into
+    """
+    logger.info("Merging voice conversation with main chat")
+    
+    # Add all voice conversation messages to main conversation
+    for message in voice_state.conversation:
+        content = message["content"]
+        
+        # Handle different content types
+        if isinstance(content, list):
+            # If content is a list, join it or take the first item
+            content = " ".join(str(item) for item in content) if content else ""
+        elif not isinstance(content, str):
+            # Convert to string if it's not already
+            content = str(content)
+        
+        # Remove microphone emoji if present
+        if content.startswith("🎤 "):
+            content = content[2:].strip()
+        
+        if message["role"] == "user":
+            main_conversation_manager.add_user_message(content)
+        else:  # assistant
+            main_conversation_manager.add_assistant_message(content)
+    
+    logger.info(f"Merged {len(voice_state.conversation)} voice messages to main conversation")
 
 
 def end_voice_conversation(state: VoiceConversationState) -> Tuple[VoiceConversationState, bool, str, List[Dict]]:
@@ -295,9 +455,9 @@ def end_voice_conversation(state: VoiceConversationState) -> Tuple[VoiceConversa
     # Copy conversation to return
     conversation_history = state.conversation.copy()
     
-    # Reset state
+    # Reset state (but keep the same conversation manager instance)
     state.is_active = False
-    state.conversation = []
+    state.conversation_manager.clear_history()
     state.last_audio_response = None
     
     return state, False, "", conversation_history

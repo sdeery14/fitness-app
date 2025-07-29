@@ -15,7 +15,8 @@ from .voice_conversation import (
     start_voice_conversation, 
     end_voice_conversation,
     process_voice_audio,
-    handle_voice_response
+    handle_voice_response,
+    merge_voice_with_main_conversation
 )
 
 logger = get_logger(__name__)
@@ -542,7 +543,7 @@ Please check your API keys and try a different model."""
     @staticmethod
     def start_voice_conversation() -> tuple:
         """
-        Start a voice conversation.
+        Start a voice conversation with shared conversation manager.
         
         Returns:
             Tuple of components to update
@@ -552,8 +553,12 @@ Please check your API keys and try a different model."""
         
         try:
             logger.info("=== START VOICE CONVERSATION BUTTON CLICKED ===")
-            state, status_visible, status_text = start_voice_conversation()
-            logger.info(f"Voice conversation started - Status: {status_text}")
+            global conversation_manager
+            
+            # Start voice conversation with the main conversation manager for context continuity
+            state, status_visible, status_text = start_voice_conversation(conversation_manager)
+            logger.info(f"Voice conversation started with shared context - Status: {status_text}")
+            logger.info(f"Main conversation has {len(conversation_manager.conversation_history)} messages")
             
             return (
                 state,                    # voice_state
@@ -571,7 +576,7 @@ Please check your API keys and try a different model."""
     @staticmethod
     def end_voice_conversation(voice_state: VoiceConversationState, main_chatbot: List[Dict]) -> tuple:
         """
-        End voice conversation and merge history with main chat.
+        End voice conversation and merge history with main chat using shared conversation manager.
         
         Args:
             voice_state: Current voice conversation state
@@ -582,21 +587,23 @@ Please check your API keys and try a different model."""
         """
         try:
             logger.info("Ending voice conversation")
+            global conversation_manager
             
-            # Get conversation history and reset state
+            # Merge voice conversation with main conversation manager
+            merge_voice_with_main_conversation(voice_state, conversation_manager)
+            
+            # Get conversation history and reset voice state
             updated_state, status_visible, status_text, voice_history = end_voice_conversation(voice_state)
             
-            # Merge voice conversation history with main chatbot
-            merged_history = main_chatbot.copy()
-            if voice_history:
-                merged_history.extend(voice_history)
-                logger.info(f"Merged {len(voice_history)} voice messages into main chat")
+            # Update main chatbot with the merged conversation from conversation manager
+            merged_history = conversation_manager.conversation_history.copy()
+            logger.info(f"Updated main chat with merged conversation ({len(merged_history)} total messages)")
             
             return (
                 updated_state,           # voice_state
                 status_text,            # voice_status markdown
                 [],                     # voice_chatbot clear
-                merged_history          # main_chatbot updated
+                merged_history          # main_chatbot updated with merged conversation
             )
             
         except Exception as e:
