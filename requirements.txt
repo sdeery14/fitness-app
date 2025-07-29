@@ -8,3 +8,8 @@ fastapi
 aiofiles
 requests
 mcp==1.12.2
+soundfile
+librosa
+spaces
+xxhash
+datasets
