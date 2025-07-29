@@ -157,6 +157,17 @@ def get_voice_manager() -> Optional[VoiceConversationManager]:
     return _voice_manager
 
 
+def reset_voice_audio_input() -> None:
+    """
+    Reset the voice audio input to prepare for next conversation turn.
+    
+    Returns:
+        None (clears the audio input)
+    """
+    logger.debug("Resetting voice audio input for next turn")
+    return None
+
+
 def process_voice_audio(audio: Tuple, state: VoiceConversationState) -> Tuple:
     """
     Process incoming voice audio during conversation.
@@ -295,7 +306,7 @@ def end_voice_conversation(state: VoiceConversationState) -> Tuple[VoiceConversa
 def get_voice_conversation_js() -> str:
     """
     Get the JavaScript code for Voice Activity Detection (VAD).
-    Based on the exact GitHub example: https://github.com/bklieger-groq/gradio-groq-basics/tree/main/calorie-tracker
+    Based on the Gradio automatic voice detection guide for continuous conversation.
     
     Returns:
         JavaScript code for VAD integration
@@ -307,35 +318,70 @@ async function main(){
     document.head.appendChild(script1)
     const script2 = document.createElement("script");
     script2.onload = async () =>  {
-    console.log("vad loaded") ;
-    var record = document.querySelector('.record-button');
-    if (record) {
-        record.textContent = "Just Start Talking!"
-        record.style = "width: fit-content; padding-right: 0.5vw;"
-    }
-    const myvad = await vad.MicVAD.new({
-        onSpeechStart: () => {
+        console.log("vad loaded");
         var record = document.querySelector('.record-button');
-        var player = document.querySelector('#streaming-out')
-        if (record != null && (player == null || player.paused)) {
-            console.log(record);
-            record.click();
+        if (record) {
+            record.textContent = "Just Start Talking!"
+            record.style = "width: fit-content; padding-right: 0.5vw;"
         }
-        },
-        onSpeechEnd: (audio) => {
-        var stop = document.querySelector('.stop-button');
-        if (stop != null) {
-            console.log(stop);
-            stop.click();
+        
+        const myvad = await vad.MicVAD.new({
+            onSpeechStart: () => {
+                console.log("Speech detected - starting recording");
+                var record = document.querySelector('.record-button');
+                var player = document.querySelector('#voice-output audio');
+                
+                // Only start recording if not already recording and no audio is playing
+                if (record != null && (player == null || player.paused)) {
+                    console.log("Clicking record button");
+                    record.click();
+                }
+            },
+            onSpeechEnd: (audio) => {
+                console.log("Speech ended - stopping recording");
+                var stop = document.querySelector('.stop-button');
+                if (stop != null) {
+                    console.log("Clicking stop button");
+                    stop.click();
+                }
+            }
+        });
+        
+        // Start VAD
+        myvad.start();
+        console.log("VAD started successfully");
+        
+        // Handle audio playback completion to re-enable recording
+        document.addEventListener('DOMContentLoaded', function() {
+            setupAudioPlaybackHandlers();
+        });
+        
+        // Set up audio playback handlers after DOM is ready
+        setTimeout(setupAudioPlaybackHandlers, 1000);
+        
+        function setupAudioPlaybackHandlers() {
+            const voiceOutput = document.querySelector('#voice-output audio');
+            if (voiceOutput) {
+                voiceOutput.addEventListener('ended', function() {
+                    console.log("Audio playback ended - ready for next input");
+                    // Reset record button text
+                    var record = document.querySelector('.record-button');
+                    if (record) {
+                        record.textContent = "Just Start Talking!"
+                        record.style = "width: fit-content; padding-right: 0.5vw;"
+                    }
+                });
+                
+                voiceOutput.addEventListener('pause', function() {
+                    console.log("Audio playback paused - ready for next input");
+                });
+            }
         }
-        }
-    })
-    myvad.start()
     }
     script2.src = "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js";
     script1.onload = () =>  {
-    console.log("onnx loaded") 
-    document.head.appendChild(script2)
+        console.log("onnx loaded") 
+        document.head.appendChild(script2)
     };
 }
 """
@@ -343,15 +389,25 @@ async function main(){
 
 def reset_voice_conversation_js() -> str:
     """
-    Get JavaScript to reset voice conversation button state.
+    Get JavaScript to reset voice conversation button state and prepare for next input.
     
     Returns:
-        JavaScript code to reset button
+        JavaScript code to reset button and prepare for continuous conversation
     """
     return """
 () => {
-  var record = document.querySelector('.record-button');
-  record.textContent = "Just Start Talking!"
-  record.style = "width: fit-content; padding-right: 0.5vw;"
+    console.log("Resetting voice conversation state");
+    
+    // Reset record button text and style
+    var record = document.querySelector('.record-button');
+    if (record) {
+        record.textContent = "Just Start Talking!"
+        record.style = "width: fit-content; padding-right: 0.5vw;"
+    }
+    
+    // Ensure VAD is ready for next input
+    setTimeout(() => {
+        console.log("Voice conversation ready for next input");
+    }, 500);
 }
 """

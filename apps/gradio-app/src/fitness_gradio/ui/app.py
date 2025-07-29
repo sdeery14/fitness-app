@@ -7,7 +7,11 @@ from typing import Dict, Any
 from .components import UIComponents
 from .handlers import UIHandlers
 from .styles import MAIN_CSS
-from .voice_conversation import get_voice_conversation_js, VoiceConversationState
+from .voice_conversation import (
+    get_voice_conversation_js, 
+    VoiceConversationState,
+    reset_voice_audio_input
+)
 from fitness_core.utils import Config, get_logger
 
 logger = get_logger(__name__)
@@ -169,11 +173,11 @@ class FitnessAppUI:
             outputs=[voice_state, voice_chatbot, voice_output]
         )
         
-        # Reset voice conversation after response (prepare for next input)
+        # Reset audio input after response to prepare for next conversation turn
         voice_response.then(
-            lambda state: state,
+            lambda state: (state, reset_voice_audio_input()),  # Clear audio input
             inputs=[voice_state],
-            outputs=[voice_state]
+            outputs=[voice_state, voice_audio]
         )
     
     def launch(self, **kwargs) -> None:
