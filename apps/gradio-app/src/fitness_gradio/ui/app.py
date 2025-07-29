@@ -7,6 +7,7 @@ from typing import Dict, Any
 from .components import UIComponents
 from .handlers import UIHandlers
 from .styles import MAIN_CSS
+from .voice_conversation import get_voice_conversation_js, VoiceConversationState
 from fitness_core.utils import Config, get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +26,8 @@ class FitnessAppUI:
         with gr.Blocks(
             theme=gr.themes.Soft(), 
             title="Fitness AI Assistant",
-            css=MAIN_CSS
+            css=MAIN_CSS,
+            js=get_voice_conversation_js()  # Add VAD JavaScript
         ) as self.demo:
             
             # Header
@@ -43,6 +45,13 @@ class FitnessAppUI:
             # Control buttons
             clear_btn, streaming_toggle, tts_toggle = UIComponents.create_control_buttons()
             
+            # Voice conversation section
+            (voice_btn, voice_status, voice_audio, voice_output, 
+             voice_exit_btn, voice_row, voice_chatbot, test_btn) = UIComponents.create_voice_conversation_section()
+            
+            # Voice conversation state
+            voice_state = gr.State(value=VoiceConversationState())
+            
             # Audio response (positioned near TTS controls)
             with gr.Row():
                 with gr.Column():
@@ -58,7 +67,9 @@ class FitnessAppUI:
             # Event handlers
             self._setup_event_handlers(
                 chatbot, chat_input, clear_btn, streaming_toggle, tts_toggle,
-                model_dropdown, selected_model, output_audio
+                model_dropdown, selected_model, output_audio,
+                voice_btn, voice_status, voice_audio, voice_output, 
+                voice_exit_btn, voice_row, voice_chatbot, voice_state, test_btn
             )
     
     def _setup_event_handlers(
@@ -70,7 +81,16 @@ class FitnessAppUI:
         tts_toggle: gr.Checkbox,
         model_dropdown: gr.Dropdown,
         selected_model: gr.Textbox,
-        output_audio: gr.Audio
+        output_audio: gr.Audio,
+        voice_btn: gr.Button,
+        voice_status: gr.Markdown,
+        voice_audio: gr.Audio,
+        voice_output: gr.Audio,
+        voice_exit_btn: gr.Button,
+        voice_row: gr.Row,
+        voice_chatbot: gr.Chatbot,
+        voice_state: gr.State,
+        test_btn: gr.Button
     ) -> None:
         """Set up all event handlers."""
         
@@ -108,6 +128,60 @@ class FitnessAppUI:
 
         # Like/dislike feedback
         chatbot.like(UIHandlers.print_like_dislike, None, None, like_user_message=True)
+        
+        # Test button for debugging
+        test_btn.click(
+            lambda: (print("===== TEST BUTTON CLICKED - GRADIO EVENT WORKING ====="), "TEST CLICKED!")[1],
+            outputs=[voice_status]
+        )
+        
+        # Voice conversation event handlers
+        
+        # Start voice conversation
+        voice_btn.click(
+            UIHandlers.start_voice_conversation,
+            inputs=[],
+            outputs=[voice_state, voice_status]
+        ).then(
+            # Update component visibility
+            lambda: (gr.update(visible=True), gr.update(visible=True), 
+                    gr.update(visible=True), gr.update(visible=False), 
+                    gr.update(visible=True)),
+            outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
+        )
+        
+        # End voice conversation and merge history
+        voice_exit_btn.click(
+            UIHandlers.end_voice_conversation,
+            inputs=[voice_state, chatbot],
+            outputs=[voice_state, voice_status, voice_chatbot, chatbot]
+        ).then(
+            # Update component visibility
+            lambda: (gr.update(visible=False), gr.update(visible=False), 
+                    gr.update(visible=False), gr.update(visible=True), 
+                    gr.update(visible=False)),
+            outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
+        )
+        
+        # Voice input handling with automatic recording
+        voice_stream = voice_audio.start_recording(
+            lambda audio, state: (audio, state),  # Simple pass-through
+            inputs=[voice_audio, voice_state],
+            outputs=[voice_audio, voice_state]
+        )
+        
+        voice_response = voice_audio.stop_recording(
+            UIHandlers.handle_voice_input,
+            inputs=[voice_state, voice_audio, selected_model],
+            outputs=[voice_state, voice_chatbot, voice_output]
+        )
+        
+        # Reset voice conversation after response (prepare for next input)
+        voice_response.then(
+            lambda state: state,
+            inputs=[voice_state],
+            outputs=[voice_state]
+        )
     
     def launch(self, **kwargs) -> None:
         """Launch the Gradio app."""

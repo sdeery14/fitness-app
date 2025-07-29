@@ -13,6 +13,8 @@ gradio = "^5.38.1"
 reportlab = "^4.4.3"
 scipy = "^1.11.0"
 groq = "^0.15.0"
+soundfile = "^0.12.1"
+xxhash = "^3.4.1"
 
 [tool.poetry.scripts]
 fitness-gradio = "fitness_gradio.main:main"

@@ -227,3 +227,73 @@ class UIComponents:
         """Create the model comparison accordion section."""
         with gr.Accordion("🤖 Model Comparison Guide", open=False):
             gr.Markdown(MODEL_COMPARISON_CONTENT)
+    
+    @staticmethod
+    def create_voice_conversation_section() -> tuple:
+        """
+        Create the voice conversation section with controls and audio components.
+        
+        Returns:
+            Tuple of (voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn)
+        """
+        with gr.Row():
+            gr.Markdown("### 🎙️ Voice Conversation")
+        
+        with gr.Row():
+            voice_btn = gr.Button(
+                "🎤 Start Voice Conversation", 
+                variant="primary",
+                size="lg"
+            )
+            voice_exit_btn = gr.Button(
+                "❌ Exit Voice Chat", 
+                variant="stop",
+                size="lg",
+                visible=False
+            )
+            # Add a test button for debugging
+            test_btn = gr.Button(
+                "🧪 Test Button", 
+                variant="secondary",
+                size="sm"
+            )
+        
+        # Voice conversation status indicator
+        voice_status = gr.Markdown(
+            value="",
+            visible=False,
+            elem_id="voice-status"
+        )
+        
+        with gr.Row(visible=False, elem_id="voice-conversation-row") as voice_row:
+            with gr.Column():
+                # Audio input for voice conversation
+                voice_audio = gr.Audio(
+                    label="🎤 Voice Input",
+                    sources=["microphone"],
+                    type="numpy",
+                    streaming=False,
+                    waveform_options=gr.WaveformOptions(waveform_color="#B83A4B"),
+                    elem_id="voice-audio"
+                )
+            
+            with gr.Column():
+                # Audio output for voice responses
+                voice_output = gr.Audio(
+                    label="🔊 AI Voice Response",
+                    streaming=False,
+                    autoplay=True,
+                    show_download_button=True,
+                    elem_id="voice-output"
+                )
+        
+        # Voice conversation chatbot (separate from main chat)
+        voice_chatbot = gr.Chatbot(
+            label="Voice Conversation",
+            type="messages",
+            show_copy_button=True,
+            visible=False,
+            elem_id="voice-chatbot"
+        )
+        
+        return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row, voice_chatbot, test_btn

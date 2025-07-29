@@ -2,6 +2,7 @@
 Main entry point for the Gradio fitness app.
 """
 import sys
+import json
 from pathlib import Path
 
 # Add the shared library to the Python path if needed
@@ -38,6 +39,29 @@ def main():
         
         app = create_fitness_app()
         gradio_config = Config.get_gradio_config()
+        
+        # Add custom route for manifest.json after the app is created
+        @app.app.get("/manifest.json")
+        async def get_manifest():
+            """Serve the manifest.json file."""
+            manifest = {
+                "name": "Fitness AI Assistant",
+                "short_name": "Fitness AI",
+                "description": "AI-powered fitness assistant for personalized health and wellness guidance",
+                "start_url": "/",
+                "display": "standalone",
+                "background_color": "#ffffff",
+                "theme_color": "#000000",
+                "icons": [
+                    {
+                        "src": "/favicon.ico",
+                        "sizes": "any",
+                        "type": "image/x-icon"
+                    }
+                ]
+            }
+            from fastapi.responses import JSONResponse
+            return JSONResponse(content=manifest)
         
         logger.info(f"🚀 Launching on http://{gradio_config['server_name']}:{gradio_config['server_port']}")
         

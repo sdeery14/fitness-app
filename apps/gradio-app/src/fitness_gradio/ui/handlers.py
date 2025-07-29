@@ -10,6 +10,13 @@ from fitness_core.agents import FitnessAgent
 from fitness_core.services import ConversationManager, AgentRunner, ResponseFormatter
 from fitness_core.utils import get_logger
 from .tts_utils import generate_speech_for_text, generate_speech_for_session, clean_tts_markup
+from .voice_conversation import (
+    VoiceConversationState, 
+    start_voice_conversation, 
+    end_voice_conversation,
+    process_voice_audio,
+    handle_voice_response
+)
 
 logger = get_logger(__name__)
 
@@ -531,3 +538,99 @@ Please check your API keys and try a different model."""
         except Exception as e:
             logger.error(f"TTS generation error: {str(e)}")
             return None
+
+    @staticmethod
+    def start_voice_conversation() -> tuple:
+        """
+        Start a voice conversation.
+        
+        Returns:
+            Tuple of components to update
+        """
+        print("=== START VOICE CONVERSATION HANDLER CALLED ===")
+        logger.info("=== START VOICE CONVERSATION HANDLER CALLED ===")
+        
+        try:
+            logger.info("=== START VOICE CONVERSATION BUTTON CLICKED ===")
+            state, status_visible, status_text = start_voice_conversation()
+            logger.info(f"Voice conversation started - Status: {status_text}")
+            
+            return (
+                state,                    # voice_state
+                status_text              # voice_status markdown
+            )
+        except Exception as e:
+            logger.error(f"Error starting voice conversation: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return (
+                VoiceConversationState(),
+                "❌ Error starting voice conversation"
+            )
+
+    @staticmethod
+    def end_voice_conversation(voice_state: VoiceConversationState, main_chatbot: List[Dict]) -> tuple:
+        """
+        End voice conversation and merge history with main chat.
+        
+        Args:
+            voice_state: Current voice conversation state
+            main_chatbot: Main chatbot history
+            
+        Returns:
+            Tuple of components to update
+        """
+        try:
+            logger.info("Ending voice conversation")
+            
+            # Get conversation history and reset state
+            updated_state, status_visible, status_text, voice_history = end_voice_conversation(voice_state)
+            
+            # Merge voice conversation history with main chatbot
+            merged_history = main_chatbot.copy()
+            if voice_history:
+                merged_history.extend(voice_history)
+                logger.info(f"Merged {len(voice_history)} voice messages into main chat")
+            
+            return (
+                updated_state,           # voice_state
+                status_text,            # voice_status markdown
+                [],                     # voice_chatbot clear
+                merged_history          # main_chatbot updated
+            )
+            
+        except Exception as e:
+            logger.error(f"Error ending voice conversation: {e}")
+            return (
+                VoiceConversationState(),
+                "",
+                [],
+                main_chatbot
+            )
+
+    @staticmethod
+    def handle_voice_input(
+        voice_state: VoiceConversationState, 
+        audio: tuple, 
+        model_name: str = None
+    ) -> Generator[tuple, None, None]:
+        """
+        Handle voice input during conversation.
+        
+        Args:
+            voice_state: Current voice conversation state
+            audio: Audio data from microphone
+            model_name: Model to use for response
+            
+        Yields:
+            Tuple of (voice_state, voice_chatbot, voice_output)
+        """
+        try:
+            for updated_state, conversation, audio_file in handle_voice_response(
+                voice_state, audio, model_name
+            ):
+                yield updated_state, conversation, audio_file
+                
+        except Exception as e:
+            logger.error(f"Error handling voice input: {e}")
+            yield voice_state, voice_state.conversation, None

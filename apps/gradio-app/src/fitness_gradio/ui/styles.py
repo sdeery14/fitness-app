@@ -12,6 +12,63 @@ MAIN_CSS = """
     height: 600px;
 }
 
+/* Voice conversation specific styles */
+#voice-status {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1)) !important;
+    border: 2px solid rgba(16, 185, 129, 0.4) !important;
+    border-radius: 12px !important;
+    padding: 12px 20px !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #065f46 !important;
+    animation: pulse 2s infinite !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+#voice-audio .record-button {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+#voice-audio .record-button:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4) !important;
+}
+
+#voice-audio .stop-button {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3) !important;
+}
+
+#voice-chatbot {
+    height: 400px !important;
+    border: 2px solid rgba(16, 185, 129, 0.3) !important;
+    border-radius: 12px !important;
+}
+
+#voice-output {
+    border: 2px solid rgba(79, 70, 229, 0.3) !important;
+    border-radius: 12px !important;
+}
+
 .model-info {
     background: linear-gradient(135deg, rgba(55, 65, 81, 0.9), rgba(75, 85, 99, 0.7)) !important;
     color: #e5e7eb !important;
