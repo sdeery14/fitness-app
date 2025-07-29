@@ -20,6 +20,7 @@ except ImportError:
 from fitness_core.utils import get_logger
 from fitness_core.agents import FitnessAgent
 from fitness_core.services import AgentRunner
+from fitness_core.services.formatters import ResponseFormatter
 from .tts_utils import generate_speech_for_session, clean_tts_markup
 
 logger = get_logger(__name__)
@@ -125,14 +126,9 @@ class VoiceConversationManager:
             if last_user_message:
                 # Generate response using the AgentRunner
                 result = AgentRunner.run_agent_safely_sync(agent, last_user_message)
-                if result and hasattr(result, 'output'):
-                    return result.output
-                elif result and hasattr(result, 'content'):
-                    return result.content
-                elif result:
-                    return str(result)
-                else:
-                    return "I'm here to help with your fitness goals. What would you like to know?"
+                
+                # Use the same formatter as text messages
+                return ResponseFormatter.extract_response_content(result)
             
             return "I'm here to help with your fitness goals. What would you like to know?"
             
