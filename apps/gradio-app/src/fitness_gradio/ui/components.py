@@ -251,12 +251,6 @@ class UIComponents:
                 size="lg",
                 visible=False
             )
-            # Add a test button for debugging
-            test_btn = gr.Button(
-                "🧪 Test Button", 
-                variant="secondary",
-                size="sm"
-            )
         
         # Voice conversation status indicator
         voice_status = gr.Markdown(
@@ -296,4 +290,4 @@ class UIComponents:
             elem_id="voice-chatbot"
         )
         
-        return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row, voice_chatbot, test_btn
+        return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row, voice_chatbot

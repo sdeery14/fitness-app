@@ -47,7 +47,7 @@ class FitnessAppUI:
             
             # Voice conversation section
             (voice_btn, voice_status, voice_audio, voice_output, 
-             voice_exit_btn, voice_row, voice_chatbot, test_btn) = UIComponents.create_voice_conversation_section()
+             voice_exit_btn, voice_row, voice_chatbot) = UIComponents.create_voice_conversation_section()
             
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
@@ -69,7 +69,7 @@ class FitnessAppUI:
                 chatbot, chat_input, clear_btn, streaming_toggle, tts_toggle,
                 model_dropdown, selected_model, output_audio,
                 voice_btn, voice_status, voice_audio, voice_output, 
-                voice_exit_btn, voice_row, voice_chatbot, voice_state, test_btn
+                voice_exit_btn, voice_row, voice_chatbot, voice_state
             )
     
     def _setup_event_handlers(
@@ -89,8 +89,7 @@ class FitnessAppUI:
         voice_exit_btn: gr.Button,
         voice_row: gr.Row,
         voice_chatbot: gr.Chatbot,
-        voice_state: gr.State,
-        test_btn: gr.Button
+        voice_state: gr.State
     ) -> None:
         """Set up all event handlers."""
         
@@ -128,12 +127,6 @@ class FitnessAppUI:
 
         # Like/dislike feedback
         chatbot.like(UIHandlers.print_like_dislike, None, None, like_user_message=True)
-        
-        # Test button for debugging
-        test_btn.click(
-            lambda: (print("===== TEST BUTTON CLICKED - GRADIO EVENT WORKING ====="), "TEST CLICKED!")[1],
-            outputs=[voice_status]
-        )
         
         # Voice conversation event handlers
         
