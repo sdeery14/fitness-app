@@ -7,7 +7,7 @@ from typing import Union, List, Dict, Any, Generator, AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from agents import Runner
 
-from ..agents.base import FitnessAgent
+from ..agents.fitness_agent import FitnessAgent
 from .exceptions import AgentExecutionError
 
 logger = logging.getLogger(__name__)
