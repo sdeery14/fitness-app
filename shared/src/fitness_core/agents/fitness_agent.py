@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 from .models import FitnessPlan, AgentConfig
 from .providers import ModelProvider
-from .fitness_plan_agent import FitnessPlanAgent
 from .tools import get_tool_functions, get_combined_instructions
 
 load_dotenv()
@@ -41,9 +40,6 @@ class FitnessAgent(Agent):
         self.final_model = final_model
         self.provider = ModelProvider.get_provider(resolved_model_name, self.full_model_name)
         self.config = config
-
-        # Create fitness plan agent with model-specific configuration
-        fitness_plan_agent = FitnessPlanAgent.create_for_model(final_model, config)
 
         # Get tools and instructions dynamically
         tools = get_tool_functions()

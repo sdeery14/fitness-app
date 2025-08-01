@@ -4,8 +4,8 @@ Example usage and demonstration of the fitness app.
 import asyncio
 from agents import Runner
 
-from ..agents import FitnessAgent
-from ..utils import setup_logging, get_logger
+from fitness_core.agents import FitnessAgent
+from fitness_core.utils import setup_logging, get_logger
 
 # Setup logging for examples
 setup_logging()
