@@ -1,5 +1,5 @@
 """
-Agent execution and streaming functionality.
+Fitness agent execution and streaming functionality.
 """
 import asyncio
 import logging
@@ -13,8 +13,8 @@ from .exceptions import AgentExecutionError
 logger = logging.getLogger(__name__)
 
 
-class AgentRunner:
-    """Handles agent execution with streaming and error management."""
+class FitnessAgentRunner:
+    """Handles fitness agent execution with streaming and error management."""
     
     @staticmethod
     def run_agent_with_streaming_sync(
@@ -59,7 +59,7 @@ class AgentRunner:
                     raise
             
             # Extract content and yield it
-            content = AgentRunner._extract_content_from_result(final_result)
+            content = FitnessAgentRunner._extract_content_from_result(final_result)
             
             # Simulate streaming by yielding the result
             yield {
@@ -127,12 +127,12 @@ class AgentRunner:
                 if not has_content:
                     logger.info("No streaming content received, falling back to direct execution")
                     final_result = Runner.run_sync(agent, agent_input)
-                    accumulated_content = AgentRunner._extract_content_from_result(final_result)
+                    accumulated_content = FitnessAgentRunner._extract_content_from_result(final_result)
             
             except Exception as streaming_error:
                 logger.warning(f"Streaming failed: {streaming_error}, falling back to sync execution")
                 final_result = Runner.run_sync(agent, agent_input)
-                accumulated_content = AgentRunner._extract_content_from_result(final_result)
+                accumulated_content = FitnessAgentRunner._extract_content_from_result(final_result)
             
             # Get the final result if we haven't already from fallback
             if final_result is None:

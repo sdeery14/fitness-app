@@ -61,6 +61,9 @@ class FitnessAppUI:
                 with gr.Column():
                     output_audio = UIComponents.create_output_audio()
             
+            # Fitness plan section
+            plan_display, view_plan_btn, clear_plan_btn = UIComponents.create_fitness_plan_section()
+            
             # Examples section
             UIComponents.create_examples_section(chat_input)
             
@@ -73,7 +76,8 @@ class FitnessAppUI:
                 chatbot, chat_input, clear_btn, streaming_toggle, tts_toggle,
                 model_dropdown, selected_model, output_audio,
                 voice_btn, voice_status, voice_audio, voice_output, 
-                voice_exit_btn, voice_row, voice_chatbot, voice_state
+                voice_exit_btn, voice_row, voice_chatbot, voice_state,
+                plan_display, view_plan_btn, clear_plan_btn
             )
     
     def _setup_event_handlers(
@@ -93,7 +97,10 @@ class FitnessAppUI:
         voice_exit_btn: gr.Button,
         voice_row: gr.Row,
         voice_chatbot: gr.Chatbot,
-        voice_state: gr.State
+        voice_state: gr.State,
+        plan_display: gr.Markdown,
+        view_plan_btn: gr.Button,
+        clear_plan_btn: gr.Button
     ) -> None:
         """Set up all event handlers."""
         
@@ -111,6 +118,12 @@ class FitnessAppUI:
             api_name="bot_response"
         )
         bot_msg.then(lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input])
+        
+        # Update plan display after bot response
+        bot_msg.then(
+            UIHandlers.refresh_plan_display,
+            outputs=plan_display
+        )
 
         # Model selection from dropdown
         model_dropdown.change(
@@ -178,6 +191,17 @@ class FitnessAppUI:
             lambda state: (state, reset_voice_audio_input()),  # Clear audio input
             inputs=[voice_state],
             outputs=[voice_state, voice_audio]
+        )
+        
+        # Fitness plan event handlers
+        view_plan_btn.click(
+            UIHandlers.get_latest_fitness_plan,
+            outputs=[plan_display]
+        )
+        
+        clear_plan_btn.click(
+            UIHandlers.clear_fitness_plan,
+            outputs=[plan_display]
         )
     
     def launch(self, **kwargs) -> None:

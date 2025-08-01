@@ -2,7 +2,7 @@
 Core services for the fitness core library.
 """
 from .conversation import ConversationManager
-from .agent_runner import AgentRunner
+from .fitness_agent_runner import FitnessAgentRunner
 from .formatters import ResponseFormatter
 from .exceptions import (
     FitnessAppError,
@@ -14,11 +14,9 @@ from .exceptions import (
 
 __all__ = [
     'ConversationManager',
-    'AgentRunner',
+    'FitnessAgentRunner',
     'ResponseFormatter',
     'FitnessAppError',
     'FitnessUIError',
-    'AgentExecutionError', 
-    'ModelProviderError',
-    'ConversationError'
+    'AgentExecutionError',
 ]

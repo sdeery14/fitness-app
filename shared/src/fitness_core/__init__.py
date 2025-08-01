@@ -9,7 +9,7 @@ __version__ = "0.1.0"
 
 # Core exports
 from .agents import FitnessAgent, FitnessPlanAgent, FitnessPlan, ModelProvider
-from .services import ConversationManager, AgentRunner, ResponseFormatter
+from .services import ConversationManager, FitnessAgentRunner, ResponseFormatter
 from .utils import Config, setup_logging, get_logger
 
 __all__ = [
@@ -21,7 +21,7 @@ __all__ = [
     
     # Services
     'ConversationManager',
-    'AgentRunner',
+    'FitnessAgentRunner',
     'ResponseFormatter',
     
     # Utils

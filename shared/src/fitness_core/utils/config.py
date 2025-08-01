@@ -18,7 +18,7 @@ class Config:
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     
     # AI Model configuration
-    DEFAULT_MODEL: str = os.getenv("AI_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+    DEFAULT_MODEL: str = os.getenv("AI_MODEL", os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile"))
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     

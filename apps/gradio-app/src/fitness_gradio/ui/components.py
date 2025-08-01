@@ -291,3 +291,40 @@ class UIComponents:
         )
         
         return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row, voice_chatbot
+
+    @staticmethod
+    def create_fitness_plan_section() -> tuple:
+        """
+        Create the fitness plan display section.
+        
+        Returns:
+            Tuple of (plan_display, view_plan_btn, clear_plan_btn)
+        """
+        with gr.Accordion("📋 Your Latest Fitness Plan", open=False):
+            gr.Markdown("""
+**View Your Generated Fitness Plan**
+
+Once you ask me to create a fitness plan, it will be stored here for easy access. You can:
+- View your latest plan anytime
+- Clear the stored plan to start fresh
+- Access detailed workout and meal information
+            """)
+            
+            plan_display = gr.Markdown(
+                value="**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!",
+                label="Current Fitness Plan"
+            )
+            
+            with gr.Row():
+                view_plan_btn = gr.Button(
+                    "📋 View Latest Plan", 
+                    variant="primary",
+                    size="sm"
+                )
+                clear_plan_btn = gr.Button(
+                    "🗑️ Clear Plan", 
+                    variant="secondary",
+                    size="sm"
+                )
+        
+        return plan_display, view_plan_btn, clear_plan_btn
