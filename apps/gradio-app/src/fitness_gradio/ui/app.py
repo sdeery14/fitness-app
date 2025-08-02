@@ -42,13 +42,19 @@ class FitnessAppUI:
             with gr.Row():
                 (model_dropdown, selected_model) = UIComponents.create_model_selection_section()
             
-            # Main chat interface
-            chatbot = UIComponents.create_chatbot()
-            
-            chat_input = UIComponents.create_chat_input()
-            
-            # Control buttons
-            clear_btn, streaming_toggle, tts_toggle = UIComponents.create_control_buttons()
+            # Main chat interface - side by side layout
+            with gr.Row():
+                with gr.Column(scale=1, min_width=600):
+                    # Chat section
+                    chatbot = UIComponents.create_chatbot()
+                    chat_input = UIComponents.create_chat_input()
+                    
+                    # Control buttons
+                    clear_btn, streaming_toggle, tts_toggle = UIComponents.create_control_buttons()
+                    
+                with gr.Column(scale=1, min_width=600):
+                    # Fitness plan section (right side)
+                    plan_display, view_plan_btn, clear_plan_btn = UIComponents.create_fitness_plan_section()
             
             # Voice conversation section
             (voice_btn, voice_status, voice_audio, voice_output, 
@@ -61,9 +67,6 @@ class FitnessAppUI:
             with gr.Row():
                 with gr.Column():
                     output_audio = UIComponents.create_output_audio()
-            
-            # Fitness plan section
-            plan_display, view_plan_btn, clear_plan_btn = UIComponents.create_fitness_plan_section()
             
             # Examples section
             UIComponents.create_examples_section(chat_input)

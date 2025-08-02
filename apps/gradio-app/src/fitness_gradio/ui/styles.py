@@ -5,11 +5,67 @@ CSS styles and theming for the fitness app UI.
 # Main CSS for the Gradio interface
 MAIN_CSS = """
 .gradio-container {
-    max-width: 1200px !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
 }
 
 #chatbot {
     height: 600px;
+}
+
+/* Fitness plan display styles */
+#fitness-plan-display {
+    height: 400px !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    border: 1px solid rgba(156, 163, 175, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    background-color: rgba(249, 250, 251, 0.05) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.fitness-plan-container {
+    height: 400px !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+}
+
+.fitness-plan-help {
+    font-size: 0.9em !important;
+    color: rgba(107, 114, 128, 0.8) !important;
+    margin-top: 12px !important;
+    padding: 0 4px !important;
+}
+
+/* Improve overall column spacing */
+.gradio-column {
+    padding: 0 12px !important;
+}
+
+/* Better button spacing in fitness plan section */
+.fitness-plan-buttons {
+    margin-top: 16px !important;
+    gap: 12px !important;
+}
+
+/* Improve row spacing for main layout */
+.gradio-row {
+    gap: 24px !important;
+}
+
+/* Ensure full width utilization */
+.gradio-container .wrap {
+    max-width: 100% !important;
+    margin: 0 auto !important;
+}
+
+/* Better typography for fitness plan header */
+.fitness-plan-header h3 {
+    margin-bottom: 16px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid rgba(16, 185, 129, 0.3) !important;
 }
 
 /* Voice conversation specific styles */

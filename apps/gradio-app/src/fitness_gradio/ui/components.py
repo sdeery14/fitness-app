@@ -300,31 +300,40 @@ class UIComponents:
         Returns:
             Tuple of (plan_display, view_plan_btn, clear_plan_btn)
         """
-        with gr.Accordion("📋 Your Latest Fitness Plan", open=False):
-            gr.Markdown("""
-**View Your Generated Fitness Plan**
-
-Once you ask me to create a fitness plan, it will be stored here for easy access. You can:
-- View your latest plan anytime
-- Clear the stored plan to start fresh
-- Access detailed workout and meal information
-            """)
-            
-            plan_display = gr.Markdown(
-                value="**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!",
-                label="Current Fitness Plan"
+        # Header for the fitness plan section
+        gr.Markdown("### 📋 Your Latest Fitness Plan", elem_classes=["fitness-plan-header"])
+        
+        # Create a scrollable fitness plan display similar to chatbot
+        plan_display = gr.Markdown(
+            value="**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!",
+            label="Current Fitness Plan",
+            elem_id="fitness-plan-display",
+            height=400,  # Fixed height to match chatbot
+            max_height=400,
+            elem_classes=["fitness-plan-container"],
+            show_label=False  # Hide the label to save space
+        )
+        
+        with gr.Row(elem_classes=["fitness-plan-buttons"]):
+            view_plan_btn = gr.Button(
+                "📋 View Latest Plan", 
+                variant="primary",
+                size="sm",
+                scale=1
             )
-            
-            with gr.Row():
-                view_plan_btn = gr.Button(
-                    "📋 View Latest Plan", 
-                    variant="primary",
-                    size="sm"
-                )
-                clear_plan_btn = gr.Button(
-                    "🗑️ Clear Plan", 
-                    variant="secondary",
-                    size="sm"
-                )
+            clear_plan_btn = gr.Button(
+                "🗑️ Clear Plan", 
+                variant="secondary", 
+                size="sm",
+                scale=1
+            )
+        
+        # Help text (moved to bottom to save space at top)
+        gr.Markdown("""
+**Quick Guide:**
+- View your latest plan anytime
+- Clear stored plan to start fresh  
+- Access detailed workout and meal information
+        """, elem_classes=["fitness-plan-help"])
         
         return plan_display, view_plan_btn, clear_plan_btn
