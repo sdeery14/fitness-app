@@ -210,6 +210,12 @@ class FitnessAppUI:
             outputs=[voice_state, voice_chatbot, voice_output]
         )
         
+        # Update plan display after voice response
+        voice_response.then(
+            UIHandlers.refresh_plan_display,
+            outputs=[plan_display]
+        )
+        
         # Reset audio input after response to prepare for next conversation turn
         voice_response.then(
             lambda state: (state, reset_voice_audio_input()),  # Clear audio input
