@@ -26,10 +26,26 @@ MAIN_CSS = """
     box-sizing: border-box !important;
 }
 
+/* Remove scrolling from the inner markdown content */
+#fitness-plan-display .prose,
+#fitness-plan-display .markdown,
+#fitness-plan-display > div {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
 .fitness-plan-container {
     height: 400px !important;
-    overflow-y: auto !important;
+    overflow: visible !important;
     width: 100% !important;
+}
+
+/* Ensure the gradio component doesn't add its own scrolling */
+#fitness-plan-display .gradio-markdown {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 .fitness-plan-help {

@@ -300,18 +300,14 @@ class UIComponents:
         Returns:
             Tuple of (plan_display, view_plan_btn, clear_plan_btn)
         """
-        # Header for the fitness plan section
-        gr.Markdown("### 📋 Your Latest Fitness Plan", elem_classes=["fitness-plan-header"])
-        
         # Create a scrollable fitness plan display similar to chatbot
         plan_display = gr.Markdown(
             value="**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!",
             label="Current Fitness Plan",
             elem_id="fitness-plan-display",
-            height=400,  # Fixed height to match chatbot
-            max_height=400,
             elem_classes=["fitness-plan-container"],
-            show_label=False  # Hide the label to save space
+            show_label=False,  # Hide the label to save space
+            container=True
         )
         
         with gr.Row(elem_classes=["fitness-plan-buttons"]):
@@ -327,13 +323,5 @@ class UIComponents:
                 size="sm",
                 scale=1
             )
-        
-        # Help text (moved to bottom to save space at top)
-        gr.Markdown("""
-**Quick Guide:**
-- View your latest plan anytime
-- Clear stored plan to start fresh  
-- Access detailed workout and meal information
-        """, elem_classes=["fitness-plan-help"])
         
         return plan_display, view_plan_btn, clear_plan_btn
