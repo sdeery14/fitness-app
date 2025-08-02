@@ -281,16 +281,10 @@ class UIComponents:
                     elem_id="voice-output"
                 )
         
-        # Voice conversation chatbot (separate from main chat)
-        voice_chatbot = gr.Chatbot(
-            label="Voice Conversation",
-            type="messages",
-            show_copy_button=True,
-            visible=False,
-            elem_id="voice-chatbot"
-        )
+        # Voice conversation chatbot - use main chatbot instead of separate one
+        # Remove separate voice_chatbot to use shared main chatbot
         
-        return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row, voice_chatbot
+        return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row
 
     @staticmethod
     def create_fitness_plan_section() -> tuple:

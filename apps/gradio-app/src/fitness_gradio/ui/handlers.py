@@ -748,37 +748,30 @@ Please check your API keys and try a different model."""
             )
 
     @staticmethod
-    def end_voice_conversation(voice_state: VoiceConversationState, main_chatbot: List[Dict]) -> tuple:
+    def end_voice_conversation(voice_state: VoiceConversationState) -> tuple:
         """
-        End voice conversation and merge history with main chat using shared conversation manager.
+        End voice conversation - simplified since using shared chatbot.
         
         Args:
             voice_state: Current voice conversation state
-            main_chatbot: Main chatbot history
             
         Returns:
-            Tuple of components to update
+            Tuple of (voice_state, voice_status)
         """
         try:
             logger.info("Ending voice conversation")
-            global conversation_manager
             
-            # Merge voice conversation with main conversation manager
-            merge_voice_with_main_conversation(voice_state, conversation_manager)
-            
-            # Get conversation history and reset voice state
+            # Reset voice state 
             updated_state, status_visible, status_text, voice_history = end_voice_conversation(voice_state)
-            
-            # Update main chatbot with the merged conversation from conversation manager
-            merged_history = conversation_manager.conversation_history.copy()
-            logger.info(f"Updated main chat with merged conversation ({len(merged_history)} total messages)")
             
             return (
                 updated_state,           # voice_state
-                status_text,            # voice_status markdown
-                [],                     # voice_chatbot clear
-                merged_history          # main_chatbot updated with merged conversation
+                status_text             # voice_status markdown
             )
+            
+        except Exception as e:
+            logger.error(f"Error ending voice conversation: {e}")
+            return voice_state, "❌ Error ending voice conversation"
             
         except Exception as e:
             logger.error(f"Error ending voice conversation: {e}")
@@ -793,25 +786,50 @@ Please check your API keys and try a different model."""
     def handle_voice_input(
         voice_state: VoiceConversationState, 
         audio: tuple, 
-        model_name: str = None
+        model_name: str = None,
+        main_chatbot: List[Dict] = None
     ) -> Generator[tuple, None, None]:
         """
-        Handle voice input during conversation.
+        Handle voice input during conversation using shared chatbot.
         
         Args:
             voice_state: Current voice conversation state
             audio: Audio data from microphone
-            model_name: Model to use for response
+            model_name: Model to use for response  
+            main_chatbot: Main chatbot history to update directly
             
         Yields:
-            Tuple of (voice_state, voice_chatbot, voice_output)
+            Tuple of (voice_state, main_chatbot, voice_output)
         """
         try:
             for updated_state, conversation, audio_file in handle_voice_response(
                 voice_state, audio, model_name
             ):
-                yield updated_state, conversation, audio_file
+                # Convert conversation to Gradio-compatible format
+                gradio_conversation = []
+                for msg in conversation:
+                    if isinstance(msg, dict) and msg.get('role') and msg.get('content'):
+                        # Extract content if it's a complex structure
+                        content = msg['content']
+                        if isinstance(content, list) and content:
+                            # Extract text from complex content structure
+                            text_content = ""
+                            for item in content:
+                                if isinstance(item, dict) and item.get('type') == 'output_text':
+                                    text_content += item.get('text', '')
+                            content = text_content if text_content else str(content)
+                        elif not isinstance(content, str):
+                            content = str(content)
+                            
+                        gradio_conversation.append({
+                            'role': msg['role'],
+                            'content': content
+                        })
+                
+                yield updated_state, gradio_conversation, audio_file
                 
         except Exception as e:
             logger.error(f"Error handling voice input: {e}")
-            yield voice_state, voice_state.conversation, None
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            yield voice_state, main_chatbot or [], None

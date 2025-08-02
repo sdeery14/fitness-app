@@ -58,7 +58,7 @@ class FitnessAppUI:
             
             # Voice conversation section
             (voice_btn, voice_status, voice_audio, voice_output, 
-             voice_exit_btn, voice_row, voice_chatbot) = UIComponents.create_voice_conversation_section()
+             voice_exit_btn, voice_row) = UIComponents.create_voice_conversation_section()
             
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
@@ -80,7 +80,7 @@ class FitnessAppUI:
                 chatbot, chat_input, clear_btn, streaming_toggle, tts_toggle,
                 model_dropdown, selected_model, output_audio,
                 voice_btn, voice_status, voice_audio, voice_output, 
-                voice_exit_btn, voice_row, voice_chatbot, voice_state,
+                voice_exit_btn, voice_row, voice_state,
                 plan_display, view_plan_btn, clear_plan_btn
             )
     
@@ -100,7 +100,6 @@ class FitnessAppUI:
         voice_output: gr.Audio,
         voice_exit_btn: gr.Button,
         voice_row: gr.Row,
-        voice_chatbot: gr.Chatbot,
         voice_state: gr.State,
         plan_display: gr.Markdown,
         view_plan_btn: gr.Button,
@@ -163,11 +162,10 @@ class FitnessAppUI:
             lambda: (
                 gr.update(visible=True, value="🎙️ Voice conversation active - Ready to listen!"), 
                 gr.update(visible=True), 
-                gr.update(visible=True), 
                 gr.update(visible=False), 
                 gr.update(visible=True)
             ),
-            outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
+            outputs=[voice_status, voice_row, voice_btn, voice_exit_btn]
         )
         
         # Initialize VAD after UI visibility is updated
@@ -176,19 +174,31 @@ class FitnessAppUI:
             js=get_voice_conversation_js()  # Load VAD JavaScript when needed
         )
         
-        # End voice conversation and merge history
+        # End voice conversation - no need to merge since using same chatbot
         voice_end = voice_exit_btn.click(
             UIHandlers.end_voice_conversation,
-            inputs=[voice_state, chatbot],
-            outputs=[voice_state, voice_status, voice_chatbot, chatbot]
+            inputs=[voice_state],
+            outputs=[voice_state, voice_status]
+        )
+        
+        # Update plan display after merging voice conversation
+        voice_end.then(
+            UIHandlers.refresh_plan_display,
+            outputs=[plan_display]
         )
         
         # Update component visibility after ending voice conversation
         voice_end_visibility = voice_end.then(
             lambda: (gr.update(visible=False), gr.update(visible=False), 
-                    gr.update(visible=False), gr.update(visible=True), 
-                    gr.update(visible=False)),
-            outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
+                    gr.update(visible=True), gr.update(visible=False)),
+            outputs=[voice_status, voice_row, voice_btn, voice_exit_btn]
+        )
+        
+        # Force refresh the main chatbot display to ensure merged conversation appears
+        voice_end_visibility.then(
+            lambda chatbot_history: chatbot_history,  # Force refresh
+            inputs=[chatbot],
+            outputs=[chatbot]
         )
         
         # Clean up VAD after UI visibility is updated
@@ -206,8 +216,8 @@ class FitnessAppUI:
         
         voice_response = voice_audio.stop_recording(
             UIHandlers.handle_voice_input,
-            inputs=[voice_state, voice_audio, selected_model],
-            outputs=[voice_state, voice_chatbot, voice_output]
+            inputs=[voice_state, voice_audio, selected_model, chatbot],
+            outputs=[voice_state, chatbot, voice_output]
         )
         
         # Update plan display after voice response
