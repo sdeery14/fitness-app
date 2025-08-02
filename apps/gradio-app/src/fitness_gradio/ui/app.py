@@ -9,6 +9,7 @@ from .handlers import UIHandlers
 from .styles import MAIN_CSS
 from .voice_conversation import (
     get_voice_conversation_js, 
+    get_vad_cleanup_js,
     VoiceConversationState,
     reset_voice_audio_input
 )
@@ -30,8 +31,8 @@ class FitnessAppUI:
         with gr.Blocks(
             theme=gr.themes.Soft(), 
             title="Fitness AI Assistant",
-            css=MAIN_CSS,
-            js=get_voice_conversation_js()  # Add VAD JavaScript
+            css=MAIN_CSS
+            # VAD JavaScript will be loaded only when voice conversation starts
         ) as self.demo:
             
             # Header
@@ -148,29 +149,49 @@ class FitnessAppUI:
         # Voice conversation event handlers
         
         # Start voice conversation
-        voice_btn.click(
+        voice_start = voice_btn.click(
             UIHandlers.start_voice_conversation,
             inputs=[],
             outputs=[voice_state, voice_status]
-        ).then(
-            # Update component visibility
-            lambda: (gr.update(visible=True), gr.update(visible=True), 
-                    gr.update(visible=True), gr.update(visible=False), 
-                    gr.update(visible=True)),
+        )
+        
+        # Update component visibility after starting voice conversation
+        voice_visibility = voice_start.then(
+            lambda: (
+                gr.update(visible=True, value="🎙️ Voice conversation active - Ready to listen!"), 
+                gr.update(visible=True), 
+                gr.update(visible=True), 
+                gr.update(visible=False), 
+                gr.update(visible=True)
+            ),
             outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
         )
         
+        # Initialize VAD after UI visibility is updated
+        voice_visibility.then(
+            fn=None,
+            js=get_voice_conversation_js()  # Load VAD JavaScript when needed
+        )
+        
         # End voice conversation and merge history
-        voice_exit_btn.click(
+        voice_end = voice_exit_btn.click(
             UIHandlers.end_voice_conversation,
             inputs=[voice_state, chatbot],
             outputs=[voice_state, voice_status, voice_chatbot, chatbot]
-        ).then(
-            # Update component visibility
+        )
+        
+        # Update component visibility after ending voice conversation
+        voice_end_visibility = voice_end.then(
             lambda: (gr.update(visible=False), gr.update(visible=False), 
                     gr.update(visible=False), gr.update(visible=True), 
                     gr.update(visible=False)),
             outputs=[voice_status, voice_row, voice_chatbot, voice_btn, voice_exit_btn]
+        )
+        
+        # Clean up VAD after UI visibility is updated
+        voice_end_visibility.then(
+            fn=None,
+            js=get_vad_cleanup_js()  # Clean up VAD JavaScript
         )
         
         # Voice input handling with automatic recording

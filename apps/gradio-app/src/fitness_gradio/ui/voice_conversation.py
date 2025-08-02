@@ -466,83 +466,153 @@ def end_voice_conversation(state: VoiceConversationState) -> Tuple[VoiceConversa
 def get_voice_conversation_js() -> str:
     """
     Get the JavaScript code for Voice Activity Detection (VAD).
-    Based on the Gradio automatic voice detection guide for continuous conversation.
+    This will be loaded on-demand when voice conversation starts.
     
     Returns:
         JavaScript code for VAD integration
     """
     return """
-async function main(){
-    const script1 = document.createElement("script");
-    script1.src = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js";
-    document.head.appendChild(script1)
-    const script2 = document.createElement("script");
-    script2.onload = async () =>  {
-        console.log("vad loaded");
-        var record = document.querySelector('.record-button');
-        if (record) {
-            record.textContent = "Just Start Talking!"
-            record.style = "width: fit-content; padding-right: 0.5vw;"
-        }
-        
-        const myvad = await vad.MicVAD.new({
-            onSpeechStart: () => {
-                console.log("Speech detected - starting recording");
-                var record = document.querySelector('.record-button');
-                var player = document.querySelector('#voice-output audio');
-                
-                // Only start recording if not already recording and no audio is playing
-                if (record != null && (player == null || player.paused)) {
-                    console.log("Clicking record button");
-                    record.click();
-                }
-            },
-            onSpeechEnd: (audio) => {
-                console.log("Speech ended - stopping recording");
-                var stop = document.querySelector('.stop-button');
-                if (stop != null) {
-                    console.log("Clicking stop button");
-                    stop.click();
-                }
+() => {
+    // Check if VAD is already initialized to avoid duplicate initialization
+    if (window.vadInitialized) {
+        console.log("VAD already initialized");
+        return;
+    }
+
+    console.log("Initializing VAD...");
+
+    // Request microphone permission explicitly
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            console.log("Microphone permission granted");
+            // Stop the test stream
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Now initialize VAD
+            initializeVAD();
+        })
+        .catch(error => {
+            console.error("Microphone permission denied:", error);
+            alert("Microphone access is required for voice conversation. Please allow microphone access and try again.");
+        });
+
+    function initializeVAD() {
+        const script1 = document.createElement("script");
+        script1.src = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js";
+        document.head.appendChild(script1);
+
+        const script2 = document.createElement("script");
+        script2.onload = async () => {
+            console.log("vad loaded");
+            var record = document.querySelector('.record-button');
+            if (record) {
+                record.textContent = "Just Start Talking!";
+                record.style = "width: fit-content; padding-right: 0.5vw;";
             }
-        });
-        
-        // Start VAD
-        myvad.start();
-        console.log("VAD started successfully");
-        
-        // Handle audio playback completion to re-enable recording
-        document.addEventListener('DOMContentLoaded', function() {
-            setupAudioPlaybackHandlers();
-        });
-        
-        // Set up audio playback handlers after DOM is ready
-        setTimeout(setupAudioPlaybackHandlers, 1000);
-        
-        function setupAudioPlaybackHandlers() {
-            const voiceOutput = document.querySelector('#voice-output audio');
-            if (voiceOutput) {
-                voiceOutput.addEventListener('ended', function() {
-                    console.log("Audio playback ended - ready for next input");
-                    // Reset record button text
-                    var record = document.querySelector('.record-button');
-                    if (record) {
-                        record.textContent = "Just Start Talking!"
-                        record.style = "width: fit-content; padding-right: 0.5vw;"
+            
+            try {
+                const myvad = await vad.MicVAD.new({
+                    onSpeechStart: () => {
+                        console.log("Speech detected - starting recording");
+                        var record = document.querySelector('.record-button');
+                        var player = document.querySelector('#voice-output audio');
+                        
+                        // Only start recording if not already recording and no audio is playing
+                        if (record != null && (player == null || player.paused)) {
+                            console.log("Clicking record button");
+                            record.click();
+                        }
+                    },
+                    onSpeechEnd: (audio) => {
+                        console.log("Speech ended - stopping recording");
+                        var stop = document.querySelector('.stop-button');
+                        if (stop != null) {
+                            console.log("Clicking stop button");
+                            stop.click();
+                        }
                     }
                 });
                 
-                voiceOutput.addEventListener('pause', function() {
-                    console.log("Audio playback paused - ready for next input");
-                });
+                // Store VAD instance globally for cleanup
+                window.currentVAD = myvad;
+                
+                // Start VAD
+                myvad.start();
+                console.log("VAD started successfully");
+                window.vadInitialized = true;
+                
+                // Set up audio playback handlers
+                function setupAudioPlaybackHandlers() {
+                    const voiceOutput = document.querySelector('#voice-output audio');
+                    if (voiceOutput) {
+                        voiceOutput.addEventListener('ended', function() {
+                            console.log("Audio playback ended - ready for next input");
+                            // Reset record button text
+                            var record = document.querySelector('.record-button');
+                            if (record) {
+                                record.textContent = "Just Start Talking!";
+                                record.style = "width: fit-content; padding-right: 0.5vw;";
+                            }
+                        });
+                        
+                        voiceOutput.addEventListener('pause', function() {
+                            console.log("Audio playback paused - ready for next input");
+                        });
+                    }
+                }
+                
+                // Set up audio playback handlers after DOM is ready
+                setTimeout(setupAudioPlaybackHandlers, 1000);
+                
+            } catch (error) {
+                console.error("Error initializing VAD:", error);
+                alert("Error initializing voice detection. Please check your microphone and try again.");
             }
-        }
+        };
+
+        script2.src = "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js";
+        script1.onload = () => {
+            console.log("onnx loaded");
+            document.head.appendChild(script2);
+        };
     }
-    script2.src = "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/bundle.min.js";
-    script1.onload = () =>  {
-        console.log("onnx loaded") 
-        document.head.appendChild(script2)
-    };
+}
+"""
+
+
+def get_vad_cleanup_js() -> str:
+    """
+    Get JavaScript code to clean up VAD when voice conversation ends.
+    
+    Returns:
+        JavaScript code to stop and cleanup VAD
+    """
+    return """
+() => {
+    console.log("Cleaning up VAD...");
+
+    // Stop and cleanup VAD if it exists
+    if (window.currentVAD) {
+        try {
+            window.currentVAD.pause();
+            console.log("VAD stopped");
+        } catch (error) {
+            console.log("Error stopping VAD:", error);
+        }
+        window.currentVAD = null;
+    }
+
+    // Reset initialization flag
+    window.vadInitialized = false;
+
+    // Reset button state
+    var record = document.querySelector('.record-button');
+    if (record) {
+        record.textContent = "Record";
+        record.style = "";
+    }
+
+    console.log("VAD cleanup completed");
 }
 """
 
@@ -557,14 +627,14 @@ def reset_voice_conversation_js() -> str:
     return """
 () => {
     console.log("Resetting voice conversation state");
-    
+
     // Reset record button text and style
     var record = document.querySelector('.record-button');
     if (record) {
-        record.textContent = "Just Start Talking!"
-        record.style = "width: fit-content; padding-right: 0.5vw;"
+        record.textContent = "Just Start Talking!";
+        record.style = "width: fit-content; padding-right: 0.5vw;";
     }
-    
+
     // Ensure VAD is ready for next input
     setTimeout(() => {
         console.log("Voice conversation ready for next input");
