@@ -42,6 +42,10 @@ class FitnessAppUI:
             with gr.Row():
                 (model_dropdown, selected_model) = UIComponents.create_model_selection_section()
             
+            # Voice conversation section
+            (voice_btn, voice_status, voice_audio, voice_output, 
+             voice_exit_btn, voice_row) = UIComponents.create_voice_conversation_section()
+            
             # Main chat interface - side by side layout
             with gr.Row():
                 with gr.Column(scale=1, min_width=600):
@@ -55,10 +59,6 @@ class FitnessAppUI:
                 with gr.Column(scale=1, min_width=600):
                     # Fitness plan section (right side)
                     plan_display, view_plan_btn, clear_plan_btn = UIComponents.create_fitness_plan_section()
-            
-            # Voice conversation section
-            (voice_btn, voice_status, voice_audio, voice_output, 
-             voice_exit_btn, voice_row) = UIComponents.create_voice_conversation_section()
             
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
