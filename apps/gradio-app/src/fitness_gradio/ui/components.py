@@ -281,8 +281,7 @@ class UIComponents:
                     elem_id="voice-output"
                 )
         
-        # Voice conversation chatbot - use main chatbot instead of separate one
-        # Remove separate voice_chatbot to use shared main chatbot
+        # Voice conversation controls - removed separate voice_chatbot for unified approach
         
         return voice_btn, voice_status, voice_audio, voice_output, voice_exit_btn, voice_row
 
