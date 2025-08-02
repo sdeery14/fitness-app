@@ -13,8 +13,6 @@ class FunctionToolConfig:
     """Configuration for a function tool including its prompt instructions."""
     function: callable
     prompt_instructions: str
-    usage_examples: Optional[List[str]] = None
-    when_to_use: Optional[str] = None
 
 
 @function_tool
@@ -54,26 +52,16 @@ FITNESS_TOOLS = {
     "create_fitness_plan": FunctionToolConfig(
         function=create_fitness_plan,
         prompt_instructions="""
-        When you need to save a completed fitness plan that has been generated as structured output, use the create_fitness_plan tool.
+        When the user requests a fitness plan, use the create_fitness_plan tool with a fully completed FitnessPlan object.
         
-        This tool should be called with a fully completed FitnessPlan object that includes:
+        The FitnessPlan object must include:
         - name: A descriptive name for the fitness plan
         - training_plan: Detailed training/workout information
         - meal_plan: Comprehensive nutrition and meal planning details
 
-        The create_fitness_plan tool takes the following actions: 
-        1. Saves the completed FitnessPlan object to the FitnessAgent class
-        2. Makes the plan available for display in the UI
-        3. Returns a formatted confirmation message with the plan details
-
-        This tool should be used AFTER you have already generated a complete fitness plan as structured output, not for generating new plans.
-        """,
-        when_to_use="You have a completed FitnessPlan object that needs to be saved and displayed in the UI",
-        usage_examples=[
-            "After generating a structured FitnessPlan object from user requirements",
-            "When you need to store a completed plan for UI display",
-            "To save a plan that was created through structured output generation"
-        ]
+        This tool saves the plan to the FitnessAgent class, makes it available for UI display, and returns a formatted confirmation message.
+        Do not read the plan back to the user in the conversation as they can see it in the UI component.
+        """
     )
 }
 
@@ -89,12 +77,6 @@ def get_combined_instructions() -> str:
     for tool_name, config in FITNESS_TOOLS.items():
         instructions.append(f"## {tool_name.replace('_', ' ').title()}")
         instructions.append(config.prompt_instructions)
-        if config.when_to_use:
-            instructions.append(f"**When to use:** {config.when_to_use}")
-        if config.usage_examples:
-            instructions.append("**Examples:**")
-            for example in config.usage_examples:
-                instructions.append(f"- {example}")
         instructions.append("")
     
     return "\n".join(instructions)
