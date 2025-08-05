@@ -7,6 +7,7 @@ import os
 from typing import List, Dict, Union, Generator, Any, Tuple, Optional
 
 from fitness_core.agents import FitnessAgent
+from fitness_core.agents.providers import ModelProvider
 from fitness_core.services import ConversationManager, FitnessAgentRunner, ResponseFormatter
 from fitness_core.utils import get_logger
 from .tts_utils import generate_speech_for_text, generate_speech_for_session, clean_tts_markup
@@ -24,7 +25,7 @@ logger = get_logger(__name__)
 # Global state management
 conversation_manager = ConversationManager()
 current_agent = None
-current_model = "llama-3.3-70b-versatile"
+current_model = ModelProvider.resolve_model_name()  # Use configured default model
 
 
 class UIHandlers:

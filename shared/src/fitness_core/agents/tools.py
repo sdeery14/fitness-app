@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from agents import function_tool, RunContextWrapper
 
-from .structured_output_models import FitnessPlan, TrainingDay
+from .structured_output_models import FitnessPlan, TrainingDay, IntensityLevel
 
 
 @dataclass
@@ -46,44 +46,44 @@ def build_fitness_schedule(fitness_plan: FitnessPlan, start_date: Optional[date]
     schedule = []
     current_date = start_date
     
-    # Sort splits by order to ensure proper sequencing
-    sorted_splits = sorted(fitness_plan.training_plan.training_plan_splits, key=lambda x: x.order)
-    
-    for split in sorted_splits:
-        # Use split's start_date if provided, otherwise use current_date
-        split_start_date = split.start_date if split.start_date else current_date
-        split_current_date = split_start_date
+    # Process training periods in order
+    for period in fitness_plan.training_plan.training_periods:
+        # Use period's start_date if provided, otherwise use current_date
+        period_start_date = period.start_date if period.start_date else current_date
+        period_current_date = period_start_date
+        
+        # Get the training split for this period
+        training_split = period.training_split
         
         # Calculate how many days this split's cycle is
         week_number = 1
         
-        # Continue cycling through the split until we reach the end date or run out of splits
-        while (end_date is None or split_current_date <= end_date):
-            for day_idx, training_day in enumerate(split.training_days):
+        # Continue cycling through the split until we reach the end date or move to next period
+        while (end_date is None or period_current_date <= end_date):
+            for day_idx, training_day in enumerate(training_split.training_days):
                 # Stop if we've reached the end date
-                if end_date and split_current_date > end_date:
+                if end_date and period_current_date > end_date:
                     break
                     
                 scheduled_day = ScheduledTrainingDay(
-                    date=split_current_date,
+                    date=period_current_date,
                     training_day=training_day,
-                    split_name=split.name,
+                    split_name=training_split.name,
                     week_number=week_number,
                     day_in_week=day_idx + 1
                 )
                 schedule.append(scheduled_day)
-                split_current_date += timedelta(days=1)
+                period_current_date += timedelta(days=1)
             
             # Increment week number after completing a full cycle
             week_number += 1
             
-            # If this is the last split and we don't have an end date, break after one cycle
-            # to avoid infinite loops
-            if end_date is None and split == sorted_splits[-1]:
-                break
+            # For now, break after one cycle of the split to move to next period
+            # TODO: Add logic to determine when to move to next period based on duration
+            break
         
-        # Update current_date for the next split (if no explicit start_date is set for next split)
-        current_date = split_current_date
+        # Update current_date for the next period
+        current_date = period_current_date
     
     return schedule
 
@@ -123,7 +123,12 @@ def format_schedule_summary(schedule: List[ScheduledTrainingDay], days_to_show: 
         day_str = scheduled_day.date.strftime("%a, %b %d")
         intensity_str = f" ({scheduled_day.training_day.intensity.value})" if scheduled_day.training_day.intensity else ""
         
-        if scheduled_day.training_day.rest_day:
+        # Check if this is a rest day (no exercises or rest intensity)
+        is_rest_day = (not scheduled_day.training_day.exercises or 
+                      len(scheduled_day.training_day.exercises) == 0 or
+                      (scheduled_day.training_day.intensity and scheduled_day.training_day.intensity.value == "rest"))
+        
+        if is_rest_day:
             summary_lines.append(f"• {day_str}: {scheduled_day.training_day.name}")
         else:
             exercise_count = len(scheduled_day.training_day.exercises) if scheduled_day.training_day.exercises else 0
@@ -216,16 +221,42 @@ FITNESS_TOOLS = {
         function=create_fitness_plan,
         prompt_instructions="""
         When the user requests a fitness plan, use the create_fitness_plan tool with a fully completed FitnessPlan object.
-        
+
+        Fitness Plans are made up of Training Plans and Meal Plans that have a start and end date.
+        If no start date is specified, assume the plan starts today.
+        If no end date is given by the user assume they want a plan to be in better shape in 3 months.
+
         The FitnessPlan object must include:
         - name: A descriptive name for the fitness plan
-        - goal: The primary fitness goal
-        - training_plan: Detailed training/workout information with splits and days
-        - meal_plan: Comprehensive nutrition and meal planning details
+        - goal: The primary fitness goal (should be specific and measurable)
+        - description: Comprehensive overview of the plan and expected outcomes
+        - training_plan: A TrainingPlan object with periodized phases that includes:
+          * name: Name that reflects the plan's focus and target event
+          * description: Comprehensive overview including training philosophy, periodization strategy, target audience, expected timeline, and how the phases progress toward the goal
+          * training_periods: Ordered list of TrainingPeriod objects representing different phases:
+            - Each period should have a name (e.g., 'Base Phase', 'Advanced Phase', 'Preparation Phase')
+            - Include start_date for each period
+            - Include intensity level (rest, light, moderate, heavy, max_effort)
+            - Each period contains a training_split with training_days that include exercises
+            - Follow periodization principles: typically base building → peak training → recovery for optimum performance at events
+            - Each phase should build on the previous with appropriate progression
+        - meal_plan: Detailed nutrition guidance including meal suggestions, macronutrient targets, and eating schedule. Should be practical and specific to the fitness goals.
         - start_date: When the plan should begin (defaults to today)
-        - target_date: Optional end date for the plan
+        - target_date: The target completion date or milestone date for the fitness plan
 
-        This tool automatically builds a date-based schedule and saves the plan to the FitnessAgent class.
+        Training Structure:
+        - TrainingPeriod contains a TrainingSplit
+        - TrainingSplit contains multiple TrainingDay objects
+        - TrainingDay contains multiple Exercise objects
+        - Each Exercise should have name, description, and appropriate fields (sets, reps, duration, distance, intensity)
+        - Include rest days in the training split as needed
+
+        Create periodized plans that progress intelligently toward the goal:
+        - For events (hikes, competitions): Use base building → strength → peak → taper progression
+        - For aesthetic goals (summer body): Use muscle building → strength → cutting/definition phases
+        - For general fitness: Use base building → strength → maintenance cycles
+        
+        This tool automatically builds a date-based schedule from the periodized phases and saves the plan.
 
         Do not read the plan back to the user in the conversation. The user can already see it in the UI component.
 

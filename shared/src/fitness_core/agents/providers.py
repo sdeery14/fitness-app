@@ -114,8 +114,15 @@ class ModelProvider:
     def get_recommended_models(cls) -> List[str]:
         """Get a list of recommended models that are most likely to be available."""
         return [
-            # Groq recommendations (fast and cost-effective) - now default
-            "llama-3.3-70b-versatile", # Latest and most capable Llama model - DEFAULT
+            # OpenAI recommendations (now default)
+            "gpt-4o",                  # Latest flagship model - NEW DEFAULT
+            "gpt-4o-mini",             # Best balance of capability and cost
+            "gpt-3.5-turbo",          # Most cost-effective OpenAI model
+            "gpt-4-turbo",            # Solid previous generation
+            "o1-mini",                # Good reasoning capabilities
+            
+            # Groq recommendations (fast and cost-effective)
+            "llama-3.3-70b-versatile", # Latest and most capable Llama model
             "llama-3.1-8b-instant",   # Fastest for simple tasks
             "gemma2-9b-it",           # Efficient Google model
             "mixtral-8x7b-32768",     # Excellent reasoning with large context
@@ -126,13 +133,6 @@ class ModelProvider:
             "claude-3.5-sonnet",       # Stable version, widely available
             "claude-3.5-sonnet-latest", # Latest improvements
             "claude-3.7-sonnet",       # Newest stable with extended thinking
-            
-            # OpenAI recommendations  
-            "gpt-4o-mini",             # Best balance of capability and cost
-            "gpt-4o",                  # Latest flagship model
-            "gpt-3.5-turbo",          # Most cost-effective OpenAI model
-            "gpt-4-turbo",            # Solid previous generation
-            "o1-mini",                # Good reasoning capabilities
         ]
 
     @classmethod 
@@ -363,15 +363,15 @@ class ModelProvider:
                 os.getenv("ANTHROPIC_MODEL") or 
                 os.getenv("OPENAI_MODEL") or 
                 os.getenv("GROQ_MODEL") or
-                "llama-3.3-70b-versatile"  # Default fallback - latest Groq Llama model for excellent performance
+                "gpt-4o"  # Default fallback - OpenAI's flagship model for excellent performance
             )
         
         # Validate the model name
         is_valid, validation_message = cls.validate_model_name(model_name)
         if not is_valid:
             print(f"Warning: {validation_message}")
-            print(f"Falling back to default model: llama-3.3-70b-versatile")
-            model_name = "llama-3.3-70b-versatile"
+            print(f"Falling back to default model: gpt-4o")
+            model_name = "gpt-4o"
         
         return model_name
 

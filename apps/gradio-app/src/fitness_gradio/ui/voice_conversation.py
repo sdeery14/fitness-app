@@ -19,6 +19,7 @@ except ImportError:
 
 from fitness_core.utils import get_logger
 from fitness_core.agents import FitnessAgent
+from fitness_core.agents.providers import ModelProvider
 from fitness_core.services import FitnessAgentRunner, ConversationManager
 from fitness_core.services.formatters import ResponseFormatter
 from .tts_utils import generate_speech_for_session, clean_tts_markup
@@ -181,7 +182,7 @@ class VoiceConversationManager:
         """
         try:
             # Create a fitness agent for this conversation
-            agent = FitnessAgent(model_name or "llama-3.3-70b-versatile")
+            agent = FitnessAgent(model_name or ModelProvider.resolve_model_name())
             
             # Get input for agent from conversation manager (same as text chat)
             agent_input = conversation_manager.get_input_for_agent()

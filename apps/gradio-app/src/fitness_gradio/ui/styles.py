@@ -339,7 +339,7 @@ MODEL_COMPARISON_CONTENT = """
 - llama-3.3-70b-versatile, mixtral-8x7b-32768
 
 **✅ GOOD for Fitness Plans (may need more specific prompting):**
-- claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo
+- gpt-4o, claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo
 - llama3-70b-8192, qwen3-32b, kimi-k2-instruct
 
 **⚠️ LIMITED for Complex Plans (basic guidance only):**
@@ -350,11 +350,11 @@ MODEL_COMPARISON_CONTENT = """
 - gemma-7b-it (may produce incomplete or empty plans)
 
 ### 🎯 Recommendations by Use Case
-- **Quick questions**: claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo, any Groq model
-- **Comprehensive fitness plans**: claude-3.5-sonnet+, gpt-4o+, llama-3.3-70b-versatile, mixtral-8x7b-32768
-- **Complex analysis**: claude-4-opus, gpt-4o, o1-preview
-- **Budget-conscious**: claude-3-haiku, gpt-3.5-turbo, gpt-4o-mini
-- **Speed priority**: Any Groq model, claude-3.5-haiku, gpt-4o-mini
+- **Quick questions**: gpt-4o, claude-3.5-haiku, gpt-4o-mini, gpt-3.5-turbo, any Groq model
+- **Comprehensive fitness plans**: gpt-4o+, claude-3.5-sonnet+, llama-3.3-70b-versatile, mixtral-8x7b-32768
+- **Complex analysis**: gpt-4o, claude-4-opus, o1-preview
+- **Budget-conscious**: gpt-4o-mini, claude-3-haiku, gpt-3.5-turbo
+- **Speed priority**: Any Groq model, gpt-4o-mini, claude-3.5-haiku
 
 ### 🔧 Troubleshooting Complex Tasks
 If you experience **empty or incomplete fitness plans** with smaller models:
