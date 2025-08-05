@@ -100,62 +100,19 @@ fitness-app/
 
 ## 🎤 Voice Input
 
-The app supports voice input using Groq's Whisper API:
-- Click the microphone button in the chat input
-- Speak your fitness questions naturally
-- Automatic transcription with high accuracy
-- See [VOICE_SETUP.md](apps/gradio-app/VOICE_SETUP.md) for setup details
-- 🔧 **Extensible**: Easy to add new interfaces
-
+Click the microphone button to speak your fitness questions. Requires GROQ_API_KEY.
 ## 🛠️ Development
 
-### Project Structure Benefits
-- **Shared Logic**: AI agents and business logic in one place
-- **Independent Apps**: Each interface can be developed separately
-- **Easy Testing**: Test core logic once, UI components separately
-- **Technology Flexibility**: Add FastAPI, React, CLI, mobile apps easily
+Edit `shared/src/fitness_core/` for core logic, `apps/gradio-app/src/` for UI.
 
-### Adding New Applications
+Run: `python start.py`
 
-Want to add a FastAPI backend or React frontend? See the [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed instructions.
+## 🎯 Usage
 
-Example for FastAPI:
-```bash
-mkdir -p apps/api/src/fitness_api
-cd apps/api
-# Create pyproject.toml with fitness-core dependency
-poetry install
-# Build your FastAPI app using shared fitness_core library
-```
-
-### Running Tests
-```bash
-# Test shared core
-cd shared && poetry run pytest
-
-# Test Gradio app  
-cd apps/gradio-app && poetry run pytest
-```
-
-## 🎯 Usage Examples
-
-### Web Interface
-1. Open http://localhost:7860
-2. Select your preferred AI model
-3. Chat naturally: *"Create a beginner workout plan for weight loss"*
-4. Get personalized fitness plans with structured workout and meal plans
-
-### Programmatic Usage
-```python
-from fitness_core import FitnessAgent
-
-# Create agent with your preferred model
-agent = FitnessAgent("gpt-4o-mini")
-
-# Get fitness advice
-response = agent.run("I want to build muscle, I'm a beginner")
-print(response)
-```
+1. Run the app: `python start.py`
+2. Open http://localhost:7860
+3. Select an AI model
+4. Chat: *"Create a beginner workout plan for weight loss"*
 
 ## 🔧 Configuration
 
@@ -211,9 +168,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 📖 [Developer Guide](docs/DEVELOPER_GUIDE.md) - How to extend the app
-- 🤖 [Model Guide](docs/COMPLETE_MODEL_GUIDE.md) - AI model information
-- 🏗️ [Architecture Guide](docs/REPOSITORY_GUIDE.md) - Project structure details
+- 📖 [Development Guide](docs/DEVELOPMENT.md) - How to extend the app
+- 🤖 [AI Models Guide](docs/MODELS.md) - Model setup and configuration
 
 ## 🎉 Acknowledgments
 

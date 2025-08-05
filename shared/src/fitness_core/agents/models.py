@@ -4,13 +4,11 @@ Pydantic models for the fitness agent.
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
-from .structured_output_models import FitnessPlan
 
 
 class AgentResponse(BaseModel):
     """Standard agent response format."""
     content: str
-    plan: Optional[FitnessPlan] = None
     metadata: Optional[dict] = None
 
 

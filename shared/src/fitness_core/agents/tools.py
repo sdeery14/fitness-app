@@ -6,8 +6,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from agents import function_tool, RunContextWrapper
 
-from .models import FitnessPlan
-from .structured_output_models import TrainingDay
+from .structured_output_models import FitnessPlan, TrainingDay
 
 
 @dataclass
@@ -56,7 +55,6 @@ def build_fitness_schedule(fitness_plan: FitnessPlan, start_date: Optional[date]
         split_current_date = split_start_date
         
         # Calculate how many days this split's cycle is
-        days_per_cycle = len(split.training_days)
         week_number = 1
         
         # Continue cycling through the split until we reach the end date or run out of splits
@@ -225,7 +223,7 @@ FITNESS_TOOLS = {
         - training_plan: Detailed training/workout information with splits and days
         - meal_plan: Comprehensive nutrition and meal planning details
         - start_date: When the plan should begin (defaults to today)
-        - total_duration_weeks: Total duration of the plan
+        - target_date: Optional end date for the plan
 
         This tool automatically builds a date-based schedule and saves the plan to the FitnessAgent class.
 
