@@ -2,13 +2,14 @@
 Main fitness agent implementation.
 """
 from typing import Optional
+from datetime import datetime
 from agents import Agent
 from dotenv import load_dotenv
 
 from .models import AgentConfig
-from .structured_output_models import FitnessPlan
 from .providers import ModelProvider
 from .tools import get_tool_functions, get_combined_instructions
+from .user_session import SessionManager, UserProfile
 
 load_dotenv()
 
@@ -17,9 +18,6 @@ class FitnessAgent(Agent):
     """
     A helpful assistant for general fitness guidance and handoffs to a plan-building agent.
     """
-    
-    # Class variable to store the most recent fitness plan
-    latest_fitness_plan: Optional[FitnessPlan] = None
 
     def __init__(self, model_name: Optional[str] = None, config: Optional[AgentConfig] = None):
         """
@@ -42,32 +40,110 @@ class FitnessAgent(Agent):
         self.provider = ModelProvider.get_provider(resolved_model_name, self.full_model_name)
         self.config = config
 
+        # Load user profile for context
+        self._load_user_profile()
+
         # Get tools and instructions dynamically
         tools = get_tool_functions()
         tool_instructions = get_combined_instructions()
+
+        # Build system prompt with user context
+        system_prompt = self._build_system_prompt(tool_instructions)
 
         # Initialize parent Agent
         super().__init__(
             name="Fitness Assistant",
             model=final_model,
-            instructions=f"""You are a professional fitness and nutrition assistant with expertise in working with users to create a personalized fitness plan.
-
-            You create personalized plans by iteratively creating plans and asking the user for feedback.
-
-            Create the first plan as soon as the user asks for a fitness plan, and then iterate on it based on their feedback.
-
-            Never ask for feedback before creating a new plan based on what you already know.
-
-            You provide short, concise responses in conversation, generally no longer than one or two sentences.
-
-            Unless specified otherwise, do not respond with any lists or bullet points. Talk like a normal person.
-
-            {tool_instructions}
-
-            Do not talk about anything outside of fitness and nutrition, and do not provide any medical advice. Always recommend that the user consults with a healthcare provider before starting any new fitness program.
-            """,
+            instructions=system_prompt,
             tools=tools
         )
+
+    def _load_user_profile(self) -> None:
+        """Load current user profile into agent context."""
+        try:
+            session = SessionManager.get_current_session()
+            self.user_profile = session.profile if session else None
+            self._profile_loaded_at = datetime.now()
+        except Exception:
+            self.user_profile = None
+            self._profile_loaded_at = datetime.now()
+
+    def refresh_user_profile(self) -> None:
+        """Refresh user profile - useful for long conversations."""
+        self._load_user_profile()
+
+    def get_profile_summary(self) -> str:
+        """Get a summary of the current user profile for debugging."""
+        if not self._has_profile_data():
+            return "No user profile data loaded"
+        
+        return f"Profile loaded at {self._profile_loaded_at}: {self._format_profile_context()}"
+
+    def _has_profile_data(self) -> bool:
+        """Check if the user profile has meaningful data."""
+        if not self.user_profile:
+            return False
+        
+        return any([
+            self.user_profile.name,
+            self.user_profile.age,
+            self.user_profile.fitness_level,
+            self.user_profile.goals,
+            self.user_profile.equipment_available
+        ])
+
+    def _format_profile_context(self) -> str:
+        """Format user profile for system prompt context."""
+        if not self.user_profile:
+            return ""
+        
+        profile = self.user_profile
+        context_parts = []
+        
+        if profile.name:
+            context_parts.append(f"User's name: {profile.name}")
+        if profile.age:
+            context_parts.append(f"Age: {profile.age}")
+        if profile.fitness_level:
+            context_parts.append(f"Fitness level: {profile.fitness_level}")
+        if profile.goals:
+            context_parts.append(f"Goals: {', '.join(profile.goals)}")
+        if profile.equipment_available:
+            context_parts.append(f"Available equipment: {', '.join(profile.equipment_available)}")
+        if profile.medical_conditions:
+            context_parts.append(f"Medical considerations: {', '.join(profile.medical_conditions)}")
+            
+        return "\n".join(context_parts)
+
+    def _build_system_prompt(self, tool_instructions: str) -> str:
+        """Build the system prompt including user profile context."""
+        base_prompt = f"""You are a professional fitness and nutrition assistant with expertise in working with users to create a personalized fitness plan.
+
+You create personalized plans by iteratively creating plans and asking the user for feedback.
+
+Create the first plan as soon as the user asks for a fitness plan, and then iterate on it based on their feedback.
+
+Never ask for feedback before creating a new plan based on what you already know.
+
+You provide short, concise responses in conversation, generally no longer than one or two sentences.
+
+Unless specified otherwise, do not respond with any lists or bullet points. Talk like a normal person.
+
+{tool_instructions}
+
+Do not talk about anything outside of fitness and nutrition, and do not provide any medical advice. Always recommend that the user consults with a healthcare provider before starting any new fitness program."""
+
+        # Add user profile context if available
+        if self._has_profile_data():
+            profile_context = self._format_profile_context()
+            return f"""{base_prompt}
+
+USER PROFILE:
+{profile_context}
+
+Remember this information about the user when providing recommendations and creating fitness plans."""
+        
+        return base_prompt
 
     @classmethod
     def list_supported_models(cls) -> dict:
@@ -103,40 +179,3 @@ class FitnessAgent(Agent):
             tuple: (is_valid, message)
         """
         return ModelProvider.validate_model_name(model_name)
-
-    @classmethod
-    def set_latest_fitness_plan(cls, fitness_plan: FitnessPlan) -> None:
-        """
-        Set the latest fitness plan generated by the agent.
-        
-        Args:
-            fitness_plan: The FitnessPlan object to store
-        """
-        cls.latest_fitness_plan = fitness_plan
-
-    @classmethod
-    def get_latest_fitness_plan(cls) -> Optional[FitnessPlan]:
-        """
-        Get the latest fitness plan generated by the agent.
-        
-        Returns:
-            The latest FitnessPlan object or None if no plan has been generated
-        """
-        return cls.latest_fitness_plan
-
-    @classmethod
-    def clear_latest_fitness_plan(cls) -> None:
-        """
-        Clear the stored fitness plan.
-        """
-        cls.latest_fitness_plan = None
-
-    @classmethod
-    def has_fitness_plan(cls) -> bool:
-        """
-        Check if a fitness plan is currently stored.
-        
-        Returns:
-            True if a fitness plan is stored, False otherwise
-        """
-        return cls.latest_fitness_plan is not None

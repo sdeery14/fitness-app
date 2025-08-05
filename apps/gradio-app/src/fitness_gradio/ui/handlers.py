@@ -8,6 +8,7 @@ from typing import List, Dict, Union, Generator, Any, Tuple, Optional
 
 from fitness_core.agents import FitnessAgent
 from fitness_core.agents.providers import ModelProvider
+from fitness_core.agents.user_session import SessionManager
 from fitness_core.services import ConversationManager, FitnessAgentRunner, ResponseFormatter
 from fitness_core.utils import get_logger
 from .tts_utils import generate_speech_for_text, generate_speech_for_session, clean_tts_markup
@@ -55,6 +56,17 @@ class UIHandlers:
             current_model = model_name
         
         return current_agent
+
+    @staticmethod
+    def refresh_agent_profile() -> None:
+        """
+        Refresh the current agent's user profile context.
+        Call this when user profile is updated to ensure agent has latest context.
+        """
+        global current_agent
+        if current_agent and hasattr(current_agent, 'refresh_user_profile'):
+            current_agent.refresh_user_profile()
+            logger.info("Refreshed agent's user profile context")
 
     @staticmethod
     def change_model(new_model: str) -> str:
@@ -505,7 +517,12 @@ Please check your API keys and try a different model."""
             Formatted fitness plan or message if no plan exists
         """
         try:
-            latest_plan = FitnessAgent.get_latest_fitness_plan()
+            session = SessionManager.get_current_session()
+            
+            if not session:
+                return "**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!"
+            
+            latest_plan = session.get_fitness_plan()
             
             if latest_plan is None:
                 return "**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!"
@@ -528,7 +545,8 @@ Please check your API keys and try a different model."""
         Returns:
             True if a fitness plan exists, False otherwise
         """
-        return FitnessAgent.has_fitness_plan()
+        session = SessionManager.get_current_session()
+        return session and session.has_fitness_plan()
 
     @staticmethod 
     def clear_fitness_plan() -> str:
@@ -539,7 +557,9 @@ Please check your API keys and try a different model."""
             Confirmation message
         """
         try:
-            FitnessAgent.clear_latest_fitness_plan()
+            session = SessionManager.get_current_session()
+            if session:
+                session.clear_fitness_plan()
             logger.info("Fitness plan cleared")
             return "**Fitness Plan Cleared**\n\nYour stored fitness plan has been cleared. Ask me to create a new one when you're ready!"
         except Exception as e:
@@ -583,7 +603,8 @@ Please check your API keys and try a different model."""
                 output = result.final_output
                 if hasattr(output, 'name') and hasattr(output, 'training_plan') and hasattr(output, 'meal_plan'):
                     logger.info("Found FitnessPlan in final_output")
-                    FitnessAgent.set_latest_fitness_plan(output)
+                    session = SessionManager.get_or_create_session()
+                    session.set_fitness_plan(output)
                     
         except Exception as e:
             logger.error(f"Error checking for fitness plan in result: {str(e)}")
@@ -658,7 +679,8 @@ Please check your API keys and try a different model."""
                     meal_plan=meal_plan
                 )
                 
-                FitnessAgent.set_latest_fitness_plan(fitness_plan)
+                session = SessionManager.get_or_create_session()
+                session.set_fitness_plan(fitness_plan)
                 logger.info(f"Successfully parsed and saved fitness plan: {name}")
                 
         except Exception as e:
@@ -773,15 +795,6 @@ Please check your API keys and try a different model."""
         except Exception as e:
             logger.error(f"Error ending voice conversation: {e}")
             return voice_state, "❌ Error ending voice conversation"
-            
-        except Exception as e:
-            logger.error(f"Error ending voice conversation: {e}")
-            return (
-                VoiceConversationState(),
-                "",
-                [],
-                main_chatbot
-            )
 
     @staticmethod
     def handle_voice_input(

@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from agents import function_tool, RunContextWrapper
 
 from .structured_output_models import FitnessPlan, TrainingDay, IntensityLevel
+from .user_session import SessionManager, UserProfile
 
 
 @dataclass
@@ -142,17 +143,17 @@ async def create_fitness_plan(
     ctx: RunContextWrapper[Any],
     fitness_plan: FitnessPlan,
 ) -> str:
-    """Save a completed fitness plan to the FitnessAgent for display in the UI.
+    """Save a completed fitness plan to the user session for display in the UI.
 
     Args:
         fitness_plan: A fully completed FitnessPlan object with name, training_plan, and meal_plan
     """
     try:
-        # Import here to avoid circular imports
-        from .fitness_agent import FitnessAgent
+        # Get or create user session
+        session = SessionManager.get_or_create_session()
         
-        # Save the fitness plan to the agent class
-        FitnessAgent.set_latest_fitness_plan(fitness_plan)
+        # Save the fitness plan to the user session
+        session.set_fitness_plan(fitness_plan)
         
         # Build the schedule from the fitness plan
         schedule = build_fitness_schedule(fitness_plan)
@@ -186,6 +187,88 @@ async def create_fitness_plan(
 
 
 @function_tool
+async def get_user_profile(
+    ctx: RunContextWrapper[Any],
+) -> str:
+    """Get the current user's profile information.
+
+    Returns:
+        String describing the user's profile or a message if no profile exists
+    """
+    try:
+        session = SessionManager.get_current_session()
+        
+        if not session:
+            return "No user session found. Your profile information will be saved as we talk."
+        
+        profile = session.profile
+        
+        if not any([profile.name, profile.age, profile.fitness_level, profile.goals]):
+            return "No profile information saved yet. Tell me about yourself - your fitness level, goals, and preferences - and I'll remember them for future conversations."
+        
+        profile_info = []
+        if profile.name:
+            profile_info.append(f"Name: {profile.name}")
+        if profile.age:
+            profile_info.append(f"Age: {profile.age}")
+        if profile.fitness_level:
+            profile_info.append(f"Fitness Level: {profile.fitness_level}")
+        if profile.goals:
+            profile_info.append(f"Goals: {', '.join(profile.goals)}")
+        if profile.equipment_available:
+            profile_info.append(f"Available Equipment: {', '.join(profile.equipment_available)}")
+        
+        return "Here's your current profile:\n\n" + "\n".join(profile_info)
+        
+    except Exception as e:
+        return f"I encountered an error while retrieving your profile: {str(e)}. Please try again."
+
+
+@function_tool
+async def update_user_profile(
+    ctx: RunContextWrapper[Any],
+    name: Optional[str] = None,
+    age: Optional[int] = None,
+    fitness_level: Optional[str] = None,
+    goals: Optional[List[str]] = None,
+    equipment_available: Optional[List[str]] = None,
+) -> str:
+    """Update the user's profile information.
+
+    Args:
+        name: User's name
+        age: User's age
+        fitness_level: User's fitness level (beginner, intermediate, advanced)
+        goals: List of fitness goals
+        equipment_available: List of available equipment
+    """
+    try:
+        session = SessionManager.get_or_create_session()
+        
+        update_data = {}
+        if name is not None:
+            update_data['name'] = name
+        if age is not None:
+            update_data['age'] = age
+        if fitness_level is not None:
+            update_data['fitness_level'] = fitness_level
+        if goals is not None:
+            update_data['goals'] = goals
+        if equipment_available is not None:
+            update_data['equipment_available'] = equipment_available
+        
+        session.update_profile(**update_data)
+        
+        # Note: In a production system, you might want to notify the agent
+        # instance that the profile has been updated so it can refresh its context
+        
+        return "I've updated your profile information. This will help me create better personalized fitness plans for you."
+        
+    except Exception as e:
+        return f"I encountered an error while updating your profile: {str(e)}. Please try again."
+
+
+@function_tool
 async def get_training_schedule(
     ctx: RunContextWrapper[Any],
     days_ahead: int = 14,
@@ -196,11 +279,14 @@ async def get_training_schedule(
         days_ahead: Number of days ahead to show in the schedule (default: 14)
     """
     try:
-        # Import here to avoid circular imports
-        from .fitness_agent import FitnessAgent
+        # Get the current user session
+        session = SessionManager.get_current_session()
+        
+        if not session:
+            return "No user session found. Please create a fitness plan first."
         
         # Get the current fitness plan
-        fitness_plan = FitnessAgent.get_latest_fitness_plan()
+        fitness_plan = session.get_fitness_plan()
         
         if not fitness_plan:
             return "No fitness plan is currently available. Please create a fitness plan first."
@@ -213,6 +299,35 @@ async def get_training_schedule(
         
     except Exception as e:
         return f"I encountered an error while retrieving your training schedule: {str(e)}. Please try again."
+
+
+@function_tool
+async def clear_user_session(
+    ctx: RunContextWrapper[Any],
+) -> str:
+    """Clear all user session data including profile and fitness plans.
+
+    Returns:
+        Confirmation message
+    """
+    try:
+        session = SessionManager.get_current_session()
+        
+        if not session:
+            return "No user session found to clear."
+        
+        # Clear the fitness plan
+        session.clear_fitness_plan()
+        
+        # Reset profile to defaults
+        session.profile = UserProfile()
+        session.workout_logs.clear()
+        session.measurements.clear()
+        
+        return "I've cleared all your session data including your profile and fitness plans. We can start fresh whenever you're ready!"
+        
+    except Exception as e:
+        return f"I encountered an error while clearing your session: {str(e)}. Please try again."
 
 
 # Tool configurations with their associated prompt instructions
@@ -263,6 +378,28 @@ FITNESS_TOOLS = {
         In one or two sentences, let the user know the plan has been created, and ask the user if they want to make any adjustments.
         """
     ),
+    "get_user_profile": FunctionToolConfig(
+        function=get_user_profile,
+        prompt_instructions="""
+        Use this tool only when:
+        1. The user explicitly asks to see their profile information
+        2. You need to refresh your memory in very long conversations (15+ exchanges)
+        3. You suspect the user's profile may have been updated since the conversation started
+        
+        In most cases, you should already have the user's profile information available in your system context.
+        This tool is primarily for displaying profile information to the user or refreshing context in extended conversations.
+        """
+    ),
+    "update_user_profile": FunctionToolConfig(
+        function=update_user_profile,
+        prompt_instructions="""
+        Use this tool when the user provides information about themselves that should be saved for future reference.
+        
+        This includes their name, age, fitness level (beginner/intermediate/advanced), goals, or available equipment.
+        
+        You can update any combination of profile fields - only pass the parameters that have new information.
+        """
+    ),
     "get_training_schedule": FunctionToolConfig(
         function=get_training_schedule,
         prompt_instructions="""
@@ -271,6 +408,20 @@ FITNESS_TOOLS = {
         The tool shows the next 14 days by default, but you can specify a different number of days if the user requests it.
         
         This tool requires that a fitness plan has already been created.
+        """
+    ),
+    "clear_user_session": FunctionToolConfig(
+        function=clear_user_session,
+        prompt_instructions="""
+        Use this tool when the user wants to start completely fresh or clear all their data.
+        
+        This will clear:
+        - User profile information
+        - Current fitness plan
+        - Workout logs
+        - All measurements
+        
+        Only use this when the user explicitly requests to clear/reset/start over with all their data.
         """
     )
 }
