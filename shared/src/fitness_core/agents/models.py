@@ -1,15 +1,10 @@
 """
 Pydantic models for the fitness agent.
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
-
-
-class FitnessPlan(BaseModel):
-    """Structured fitness plan model."""
-    name: str
-    training_plan: str
-    meal_plan: str
+from datetime import datetime, date
+from .structured_output_models import FitnessPlan
 
 
 class AgentResponse(BaseModel):

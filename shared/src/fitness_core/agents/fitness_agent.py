@@ -5,7 +5,8 @@ from typing import Optional
 from agents import Agent
 from dotenv import load_dotenv
 
-from .models import FitnessPlan, AgentConfig
+from .models import AgentConfig
+from .structured_output_models import FitnessPlan
 from .providers import ModelProvider
 from .tools import get_tool_functions, get_combined_instructions
 
@@ -53,7 +54,13 @@ class FitnessAgent(Agent):
 
             You create personalized plans by iteratively creating plans and asking the user for feedback.
 
-            You provide short, concise responses in conversation.
+            Create the first plan as soon as the user asks for a fitness plan, and then iterate on it based on their feedback.
+
+            Never ask for feedback before creating a new plan based on what you already know.
+
+            You provide short, concise responses in conversation, generally no longer than one or two sentences.
+
+            Unless specified otherwise, do not respond with any lists or bullet points. Talk like a normal person.
 
             {tool_instructions}
 
