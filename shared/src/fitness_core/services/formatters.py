@@ -151,16 +151,101 @@ class ResponseFormatter:
             if plan_description:
                 formatted += f"{plan_description}\n\n"
             
-            # Format training splits
-            training_splits = getattr(training_plan, 'training_plan_splits', [])
-            for split in training_splits:
-                formatted += ResponseFormatter._format_training_split_object(split)
+            # Check for the new structure with training_periods
+            training_periods = getattr(training_plan, 'training_periods', None)
+            if training_periods:
+                formatted += ResponseFormatter._format_training_periods(training_periods)
+            else:
+                # Fallback to legacy training_plan_splits structure
+                training_splits = getattr(training_plan, 'training_plan_splits', [])
+                if training_splits:
+                    for split in training_splits:
+                        formatted += ResponseFormatter._format_training_split_object(split)
+                else:
+                    formatted += "No training periods defined.\n\n"
             
             return formatted
             
         except Exception as e:
             logger.error(f"Error formatting training plan object: {str(e)}")
             return f"Error formatting training plan: {str(e)}"
+
+    @staticmethod
+    def _format_training_periods(training_periods: list) -> str:
+        """Format training periods from the new Pydantic structure."""
+        try:
+            formatted = ""
+            
+            for period_idx, period in enumerate(training_periods, 1):
+                # Format period header
+                period_name = getattr(period, 'name', f'Training Period {period_idx}')
+                period_description = getattr(period, 'description', '')
+                period_intensity = getattr(period, 'intensity', None)
+                start_date = getattr(period, 'start_date', None)
+                
+                formatted += f"### 📅 Phase {period_idx}: {period_name}\n\n"
+                
+                if period_description:
+                    formatted += f"{period_description}\n\n"
+                
+                # Add period details
+                period_details = []
+                if start_date:
+                    period_details.append(f"**Start Date:** {start_date.strftime('%B %d, %Y')}")
+                if period_intensity:
+                    intensity_emojis = {
+                        'rest': '😴', 'light': '🟢', 'moderate': '🟡', 'heavy': '🔴', 'max_effort': '🔥'
+                    }
+                    intensity_str = str(period_intensity).lower()
+                    intensity_emoji = intensity_emojis.get(intensity_str, '⚪')
+                    period_details.append(f"**Overall Intensity:** {intensity_emoji} {intensity_str.title()}")
+                
+                if period_details:
+                    formatted += f"{' | '.join(period_details)}\n\n"
+                
+                # Format the training split for this period
+                training_split = getattr(period, 'training_split', None)
+                if training_split:
+                    formatted += ResponseFormatter._format_new_training_split(training_split)
+                
+                formatted += "---\n\n"
+            
+            return formatted
+            
+        except Exception as e:
+            logger.error(f"Error formatting training periods: {str(e)}")
+            return f"**Error Formatting Training Periods**\n\n{str(e)}"
+
+    @staticmethod
+    def _format_new_training_split(training_split: Any) -> str:
+        """Format a TrainingSplit object from the new Pydantic structure."""
+        try:
+            formatted = ""
+            
+            # Get split details
+            split_name = getattr(training_split, 'name', 'Training Split')
+            split_description = getattr(training_split, 'description', '')
+            
+            formatted += f"**🗓️ {split_name}**\n\n"
+            if split_description:
+                formatted += f"{split_description}\n\n"
+            
+            # Format training days
+            training_days = getattr(training_split, 'training_days', [])
+            if training_days:
+                # Sort by order_number if available
+                sorted_days = sorted(training_days, key=lambda x: getattr(x, 'order_number', 0))
+                for day in sorted_days:
+                    formatted += ResponseFormatter._format_training_day_object(day)
+                    formatted += "\n"
+            else:
+                formatted += "No training days defined for this split.\n\n"
+            
+            return formatted
+            
+        except Exception as e:
+            logger.error(f"Error formatting training split: {str(e)}")
+            return f"**Error Formatting Training Split**\n\n{str(e)}"
 
     @staticmethod
     def _format_training_split_object(split: Any) -> str:
@@ -198,8 +283,16 @@ class ResponseFormatter:
             day_name = getattr(day, 'name', 'Training Day')
             day_description = getattr(day, 'description', '')
             day_order = getattr(day, 'order_number', '')
-            is_rest_day = getattr(day, 'rest_day', False)
             day_intensity = getattr(day, 'intensity', None)
+            exercises = getattr(day, 'exercises', [])
+            
+            # Determine if this is a rest day
+            is_rest_day = (
+                not exercises or 
+                len(exercises) == 0 or 
+                (day_intensity and str(day_intensity).lower() == 'rest') or
+                day_name.lower().find('rest') != -1
+            )
             
             # Format day header
             day_emoji = "😴" if is_rest_day else "💪"
@@ -213,7 +306,8 @@ class ResponseFormatter:
                     'light': '🟢', 'LIGHT': '🟢',
                     'moderate': '🟡', 'MODERATE': '🟡',
                     'heavy': '🔴', 'HEAVY': '🔴',
-                    'max_effort': '🔥', 'MAX_EFFORT': '🔥'
+                    'max_effort': '🔥', 'MAX_EFFORT': '🔥',
+                    'rest': '😴', 'REST': '😴'
                 }
                 # Handle both enum objects and string representations
                 intensity_str = str(day_intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0]
@@ -221,15 +315,15 @@ class ResponseFormatter:
                 formatted += f"**Intensity:** {intensity_emoji} {intensity_str.title()}\n\n"
             
             # Format exercises
-            if not is_rest_day:
-                exercises = getattr(day, 'exercises', [])
-                if exercises:
-                    formatted += "**Exercises:**\n\n"
-                    for i, exercise in enumerate(exercises, 1):
-                        formatted += ResponseFormatter._format_exercise_object(exercise, i)
-                        formatted += "\n"
-            else:
+            if not is_rest_day and exercises:
+                formatted += "**Exercises:**\n\n"
+                for i, exercise in enumerate(exercises, 1):
+                    formatted += ResponseFormatter._format_exercise_object(exercise, i)
+                    formatted += "\n"
+            elif is_rest_day:
                 formatted += "**Rest Day** - Focus on recovery, light stretching, or gentle activities.\n\n"
+            else:
+                formatted += "**No exercises defined for this day.**\n\n"
             
             return formatted
             
@@ -247,18 +341,32 @@ class ResponseFormatter:
             sets = getattr(exercise, 'sets', None)
             reps = getattr(exercise, 'reps', None)
             duration = getattr(exercise, 'duration', None)
+            distance = getattr(exercise, 'distance', None)
             intensity = getattr(exercise, 'intensity', None)
             
             formatted = f"{number}. **{name}**\n"
             
-            # Add sets/reps/duration info
+            # Add sets/reps/duration/distance info
             workout_details = []
             if sets:
                 workout_details.append(f"{sets} sets")
             if reps:
                 workout_details.append(f"{reps} reps")
             if duration:
-                workout_details.append(f"{duration}s")
+                if duration < 60:
+                    workout_details.append(f"{duration}s")
+                else:
+                    minutes = duration // 60
+                    seconds = duration % 60
+                    if seconds > 0:
+                        workout_details.append(f"{minutes}m {seconds}s")
+                    else:
+                        workout_details.append(f"{minutes}m")
+            if distance:
+                if distance >= 1000:
+                    workout_details.append(f"{distance / 1000:.1f}km")
+                else:
+                    workout_details.append(f"{distance}m")
             
             if workout_details:
                 formatted += f"   *{' × '.join(workout_details)}*"
@@ -268,7 +376,8 @@ class ResponseFormatter:
                     'light': '🟢', 'LIGHT': '🟢',
                     'moderate': '🟡', 'MODERATE': '🟡',
                     'heavy': '🔴', 'HEAVY': '🔴',
-                    'max_effort': '🔥', 'MAX_EFFORT': '🔥'
+                    'max_effort': '🔥', 'MAX_EFFORT': '🔥',
+                    'rest': '😴', 'REST': '😴'
                 }
                 # Handle both enum objects and string representations
                 intensity_str = str(intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0]

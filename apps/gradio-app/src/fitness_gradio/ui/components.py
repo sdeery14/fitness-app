@@ -3,6 +3,7 @@ UI components for the fitness app.
 """
 import gradio as gr
 from typing import List, Any
+from datetime import date
 
 from fitness_core.agents import FitnessAgent
 from fitness_core.agents.providers import ModelProvider
@@ -297,9 +298,14 @@ class UIComponents:
         Returns:
             Tuple of (plan_display, view_plan_btn, clear_plan_btn)
         """
+        from fitness_core.agents.user_session import SessionManager
+        
+        # Get initial plan display content
+        initial_content = UIComponents._get_initial_plan_content()
+        
         # Create a scrollable fitness plan display similar to chatbot
         plan_display = gr.Markdown(
-            value="**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!",
+            value=initial_content,
             label="Current Fitness Plan",
             elem_id="fitness-plan-display",
             elem_classes=["fitness-plan-container"],
@@ -322,6 +328,22 @@ class UIComponents:
             )
         
         return plan_display, view_plan_btn, clear_plan_btn
+
+    @staticmethod
+    def _get_initial_plan_content() -> str:
+        """Get initial content for the fitness plan display."""
+        try:
+            from fitness_core.agents.user_session import SessionManager
+            
+            session = SessionManager.get_current_session()
+            if session and session.has_fitness_plan():
+                plan = session.get_fitness_plan()
+                if plan:
+                    return UIComponents.format_structured_fitness_plan(plan)
+            
+            return "**No Fitness Plan Available**\n\nNo fitness plan has been generated yet. Ask me to create a personalized fitness plan for you!"
+        except Exception as e:
+            return f"**Error Loading Plan**\n\nThere was an error loading your fitness plan: {str(e)}"
 
     @staticmethod
     def format_structured_fitness_plan(plan_obj: Any) -> str:
@@ -359,6 +381,8 @@ class UIComponents:
             plan_goal = getattr(plan_obj, 'goal', '')
             plan_description = getattr(plan_obj, 'description', '')
             meal_plan = getattr(plan_obj, 'meal_plan', '')
+            start_date = getattr(plan_obj, 'start_date', None)
+            target_date = getattr(plan_obj, 'target_date', None)
             
             # Format header
             formatted = f"# 🏋️ {plan_name}\n\n"
@@ -368,6 +392,15 @@ class UIComponents:
             
             if plan_description:
                 formatted += f"**📋 Overview:** {plan_description}\n\n"
+            
+            # Add timeline information
+            if start_date or target_date:
+                formatted += "**📅 Timeline:**\n"
+                if start_date:
+                    formatted += f"- **Start Date:** {start_date.strftime('%B %d, %Y')}\n"
+                if target_date:
+                    formatted += f"- **Target Date:** {target_date.strftime('%B %d, %Y')}\n"
+                formatted += "\n"
             
             # Format training plan
             training_plan = getattr(plan_obj, 'training_plan', None)
@@ -402,28 +435,22 @@ class UIComponents:
             # Get training plan details
             plan_name = getattr(training_plan, 'name', 'Training Plan')
             plan_description = getattr(training_plan, 'description', '')
-            goal_event = getattr(training_plan, 'goal_event', None)
-            target_event_date = getattr(training_plan, 'target_event_date', None)
-            total_duration_weeks = getattr(training_plan, 'total_duration_weeks', None)
             
             formatted += f"**{plan_name}**\n\n"
             if plan_description:
                 formatted += f"{plan_description}\n\n"
             
-            # Add goal event and timeline information
-            if goal_event:
-                formatted += f"**🎯 Target Event:** {goal_event}\n"
-            if target_event_date:
-                formatted += f"**📅 Target Date:** {target_event_date.strftime('%B %d, %Y')}\n"
-            if total_duration_weeks:
-                formatted += f"**⏱️ Total Duration:** {total_duration_weeks} weeks\n"
-            
-            if goal_event or target_event_date or total_duration_weeks:
-                formatted += "\n"
-            
-            # Format training splits with date ranges
-            training_splits = getattr(training_plan, 'training_plan_splits', [])
-            formatted += UIComponents._format_training_splits_with_dates(training_splits, target_event_date)
+            # Check for the new structure with training_periods
+            training_periods = getattr(training_plan, 'training_periods', None)
+            if training_periods:
+                formatted += UIComponents._format_training_periods(training_periods)
+            else:
+                # Fallback to legacy training_plan_splits structure
+                training_splits = getattr(training_plan, 'training_plan_splits', [])
+                if training_splits:
+                    formatted += UIComponents._format_training_splits_with_dates(training_splits, None)
+                else:
+                    formatted += "No training periods defined.\n\n"
             
             return formatted
             
@@ -536,6 +563,81 @@ class UIComponents:
         except Exception as e:
             return f"Error formatting training split content: {str(e)}"
 
+    @staticmethod
+    def _format_training_periods(training_periods: list) -> str:
+        """Format training periods from the new Pydantic structure."""
+        try:
+            formatted = ""
+            
+            for period_idx, period in enumerate(training_periods, 1):
+                # Format period header
+                period_name = getattr(period, 'name', f'Training Period {period_idx}')
+                period_description = getattr(period, 'description', '')
+                period_intensity = getattr(period, 'intensity', None)
+                start_date = getattr(period, 'start_date', None)
+                
+                formatted += f"### 📅 Phase {period_idx}: {period_name}\n\n"
+                
+                if period_description:
+                    formatted += f"{period_description}\n\n"
+                
+                # Add period details
+                period_details = []
+                if start_date:
+                    period_details.append(f"**Start Date:** {start_date.strftime('%B %d, %Y')}")
+                if period_intensity:
+                    intensity_emojis = {
+                        'rest': '😴', 'light': '🟢', 'moderate': '🟡', 'heavy': '🔴', 'max_effort': '🔥'
+                    }
+                    intensity_str = str(period_intensity).lower()
+                    intensity_emoji = intensity_emojis.get(intensity_str, '⚪')
+                    period_details.append(f"**Overall Intensity:** {intensity_emoji} {intensity_str.title()}")
+                
+                if period_details:
+                    formatted += f"{' | '.join(period_details)}\n\n"
+                
+                # Format the training split for this period
+                training_split = getattr(period, 'training_split', None)
+                if training_split:
+                    formatted += UIComponents._format_new_training_split(training_split)
+                
+                formatted += "---\n\n"
+            
+            return formatted
+            
+        except Exception as e:
+            return f"**Error Formatting Training Periods**\n\n{str(e)}"
+
+    @staticmethod
+    def _format_new_training_split(training_split: Any) -> str:
+        """Format a TrainingSplit object from the new Pydantic structure."""
+        try:
+            formatted = ""
+            
+            # Get split details
+            split_name = getattr(training_split, 'name', 'Training Split')
+            split_description = getattr(training_split, 'description', '')
+            
+            formatted += f"**🗓️ {split_name}**\n\n"
+            if split_description:
+                formatted += f"{split_description}\n\n"
+            
+            # Format training days
+            training_days = getattr(training_split, 'training_days', [])
+            if training_days:
+                # Sort by order_number if available
+                sorted_days = sorted(training_days, key=lambda x: getattr(x, 'order_number', 0))
+                for day in sorted_days:
+                    formatted += UIComponents._format_training_day(day)
+                    formatted += "\n"
+            else:
+                formatted += "No training days defined for this split.\n\n"
+            
+            return formatted
+            
+        except Exception as e:
+            return f"**Error Formatting Training Split**\n\n{str(e)}"
+
     @staticmethod 
     def _format_training_day(day: Any) -> str:
         """Format a TrainingDay object."""
@@ -546,8 +648,16 @@ class UIComponents:
             day_name = getattr(day, 'name', 'Training Day')
             day_description = getattr(day, 'description', '')
             day_order = getattr(day, 'order_number', '')
-            is_rest_day = getattr(day, 'rest_day', False)
             day_intensity = getattr(day, 'intensity', None)
+            exercises = getattr(day, 'exercises', [])
+            
+            # Determine if this is a rest day
+            is_rest_day = (
+                not exercises or 
+                len(exercises) == 0 or 
+                (day_intensity and str(day_intensity).lower() == 'rest') or
+                day_name.lower().find('rest') != -1
+            )
             
             # Format day header
             day_emoji = "😴" if is_rest_day else "💪"
@@ -561,22 +671,23 @@ class UIComponents:
                     'light': '🟢',
                     'moderate': '🟡', 
                     'heavy': '🔴',
-                    'max_effort': '🔥'
+                    'max_effort': '🔥',
+                    'rest': '😴'
                 }
-                intensity_str = str(day_intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0]
-                intensity_emoji = intensity_emojis.get(intensity_str.lower(), '⚪')
+                intensity_str = str(day_intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0].lower()
+                intensity_emoji = intensity_emojis.get(intensity_str, '⚪')
                 formatted += f"**Intensity:** {intensity_emoji} {intensity_str.title()}\n\n"
             
             # Format exercises
-            if not is_rest_day:
-                exercises = getattr(day, 'exercises', [])
-                if exercises:
-                    formatted += "**Exercises:**\n\n"
-                    for i, exercise in enumerate(exercises, 1):
-                        formatted += UIComponents._format_exercise(exercise, i)
-                        formatted += "\n"
-            else:
+            if not is_rest_day and exercises:
+                formatted += "**Exercises:**\n\n"
+                for i, exercise in enumerate(exercises, 1):
+                    formatted += UIComponents._format_exercise(exercise, i)
+                    formatted += "\n"
+            elif is_rest_day:
                 formatted += "**Rest Day** - Focus on recovery, light stretching, or gentle activities.\n\n"
+            else:
+                formatted += "**No exercises defined for this day.**\n\n"
             
             return formatted
             
@@ -593,18 +704,32 @@ class UIComponents:
             sets = getattr(exercise, 'sets', None)
             reps = getattr(exercise, 'reps', None)
             duration = getattr(exercise, 'duration', None)
+            distance = getattr(exercise, 'distance', None)
             intensity = getattr(exercise, 'intensity', None)
             
             formatted = f"{number}. **{name}**\n"
             
-            # Add sets/reps/duration info
+            # Add sets/reps/duration/distance info
             workout_details = []
             if sets:
                 workout_details.append(f"{sets} sets")
             if reps:
                 workout_details.append(f"{reps} reps")
             if duration:
-                workout_details.append(f"{duration}s")
+                if duration < 60:
+                    workout_details.append(f"{duration}s")
+                else:
+                    minutes = duration // 60
+                    seconds = duration % 60
+                    if seconds > 0:
+                        workout_details.append(f"{minutes}m {seconds}s")
+                    else:
+                        workout_details.append(f"{minutes}m")
+            if distance:
+                if distance >= 1000:
+                    workout_details.append(f"{distance / 1000:.1f}km")
+                else:
+                    workout_details.append(f"{distance}m")
             
             if workout_details:
                 formatted += f"   *{' × '.join(workout_details)}*"
@@ -614,10 +739,11 @@ class UIComponents:
                     'light': '🟢',
                     'moderate': '🟡',
                     'heavy': '🔴', 
-                    'max_effort': '🔥'
+                    'max_effort': '🔥',
+                    'rest': '😴'
                 }
-                intensity_str = str(intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0]
-                intensity_emoji = intensity_emojis.get(intensity_str.lower(), '⚪')
+                intensity_str = str(intensity).replace('IntensityLevel.', '').replace('<', '').replace('>', '').split(':')[0].lower()
+                intensity_emoji = intensity_emojis.get(intensity_str, '⚪')
                 formatted += f" - {intensity_emoji} {intensity_str.title()}"
             
             formatted += "\n"
