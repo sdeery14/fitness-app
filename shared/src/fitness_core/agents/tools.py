@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from agents import function_tool, RunContextWrapper
 
-from .structured_output_models import FitnessPlan, TrainingDay, IntensityLevel
+from .fitness_plan_model import FitnessPlan, TrainingDay, IntensityLevel
 from .user_session import SessionManager, UserProfile
 
 

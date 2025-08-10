@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 from dataclasses import dataclass, field
 import uuid
 
-from .structured_output_models import FitnessPlan
+from .fitness_plan_model import FitnessPlan
 
 
 @dataclass
