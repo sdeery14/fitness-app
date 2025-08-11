@@ -658,7 +658,7 @@ Please check your API keys and try a different model."""
             
             if "training_plan" in content.lower() and "meal_plan" in content.lower():
                 # Import here to avoid circular imports
-                from fitness_core.agents.models import FitnessPlan
+                from fitness_core.agents.agent_models import FitnessPlan
                 
                 # Simple parsing - this can be enhanced based on actual output format
                 lines = content.split('\n')

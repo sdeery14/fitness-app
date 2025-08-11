@@ -2,7 +2,7 @@
 Conversation management for the fitness agent.
 """
 from typing import List, Dict, Union, Any
-from ..agents.models import ConversationMessage
+from ..agents.agent_models import ConversationMessage
 from .exceptions import ConversationError
 
 

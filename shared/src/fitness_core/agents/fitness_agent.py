@@ -6,7 +6,7 @@ from datetime import datetime
 from agents import Agent
 from dotenv import load_dotenv
 
-from .models import AgentConfig
+from .agent_models import AgentConfig
 from .providers import ModelProvider
 from .tools import get_tool_functions, get_combined_instructions
 from .user_session import SessionManager, UserProfile

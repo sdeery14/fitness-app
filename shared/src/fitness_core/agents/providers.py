@@ -3,7 +3,7 @@ AI model provider management and configuration.
 """
 import os
 from typing import Dict, List, Tuple, Optional
-from .models import AgentConfig
+from .agent_models import AgentConfig
 
 
 class ModelProvider:
