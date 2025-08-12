@@ -2,7 +2,6 @@
 Event handlers for the fitness app UI.
 """
 import gradio as gr
-import logging
 import os
 from typing import List, Dict, Union, Generator, Any, Tuple, Optional
 
@@ -275,7 +274,6 @@ Please check your API keys and try a different model."""
         Returns:
             True if it's an audio file, False otherwise
         """
-        import os
         audio_extensions = {'.wav', '.mp3', '.m4a', '.ogg', '.flac', '.webm', '.mp4', '.mpeg', '.mpga'}
         file_ext = os.path.splitext(file_path.lower())[1]
         return file_ext in audio_extensions
@@ -375,9 +373,6 @@ Please check your API keys and try a different model."""
                 if final_result:
                     conversation_manager.update_from_result(final_result)
                     logger.info(f"Updated conversation manager. {conversation_manager.get_history_summary()}")
-                    
-                    # Check if the result contains a FitnessPlan and save it
-                    UIHandlers._check_and_save_fitness_plan(final_result)
                 
                 # Stream the content updates to the UI
                 if content_chunks:
@@ -442,9 +437,6 @@ Please check your API keys and try a different model."""
             # Update conversation manager with the result
             conversation_manager.update_from_result(result)
             logger.info(f"Updated conversation manager. {conversation_manager.get_history_summary()}")
-            
-            # Check if the result contains a FitnessPlan and save it
-            UIHandlers._check_and_save_fitness_plan(result)
             
             # Extract and format response for display
             response = ResponseFormatter.extract_response_content(result)
@@ -577,116 +569,6 @@ Please check your API keys and try a different model."""
         return UIHandlers.get_latest_fitness_plan()
 
     @staticmethod
-    def _check_and_save_fitness_plan(result: Any) -> None:
-        """
-        Check if the agent result contains a FitnessPlan and save it if found.
-        
-        Args:
-            result: The agent execution result to check
-        """
-        try:
-            # Check if the result has tool calls that might contain fitness plans
-            if hasattr(result, 'messages') and result.messages:
-                for message in result.messages:
-                    if hasattr(message, 'tool_calls') and message.tool_calls:
-                        for tool_call in message.tool_calls:
-                            # Check if this is a create_fitness_plan tool call
-                            if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'name'):
-                                if tool_call.function.name == 'create_fitness_plan':
-                                    logger.info("Found create_fitness_plan tool call")
-                                    # Look for the tool result in the subsequent messages
-                                    UIHandlers._extract_fitness_plan_from_tool_result(result)
-                                    return
-            
-            # Also check the final_output directly for FitnessPlan objects
-            if hasattr(result, 'final_output'):
-                output = result.final_output
-                if hasattr(output, 'name') and hasattr(output, 'training_plan') and hasattr(output, 'meal_plan'):
-                    logger.info("Found FitnessPlan in final_output")
-                    session = SessionManager.get_or_create_session()
-                    session.set_fitness_plan(output)
-                    
-        except Exception as e:
-            logger.error(f"Error checking for fitness plan in result: {str(e)}")
-
-    @staticmethod
-    def _extract_fitness_plan_from_tool_result(result: Any) -> None:
-        """
-        Extract FitnessPlan from tool execution results.
-        
-        Args:
-            result: The agent execution result containing tool calls
-        """
-        try:
-            # Look through messages for tool results
-            if hasattr(result, 'messages') and result.messages:
-                for message in result.messages:
-                    if hasattr(message, 'tool_calls') and message.tool_calls:
-                        for tool_call in message.tool_calls:
-                            if (hasattr(tool_call, 'function') and 
-                                hasattr(tool_call.function, 'name') and 
-                                tool_call.function.name == 'create_fitness_plan'):
-                                
-                                # The tool should have returned a structured FitnessPlan
-                                # We need to find the corresponding tool result
-                                tool_call_id = getattr(tool_call, 'id', None)
-                                if tool_call_id:
-                                    # Look for the tool result message
-                                    for msg in result.messages:
-                                        if (hasattr(msg, 'role') and msg.role == 'tool' and
-                                            hasattr(msg, 'tool_call_id') and msg.tool_call_id == tool_call_id):
-                                            
-                                            # Try to extract FitnessPlan from the tool result
-                                            tool_content = getattr(msg, 'content', '')
-                                            UIHandlers._parse_and_save_fitness_plan_from_content(tool_content)
-                                            return
-                                            
-        except Exception as e:
-            logger.error(f"Error extracting fitness plan from tool result: {str(e)}")
-
-    @staticmethod
-    def _parse_and_save_fitness_plan_from_content(content: str) -> None:
-        """
-        Parse fitness plan content and save it if it's a valid plan.
-        
-        Args:
-            content: Content that might contain fitness plan data
-        """
-        try:
-            # This is a simplified parser - we might need to enhance this based on actual tool output format
-            # For now, we'll check if the content looks like a fitness plan and create a simple FitnessPlan object
-            
-            if "training_plan" in content.lower() and "meal_plan" in content.lower():
-                # Import here to avoid circular imports
-                from fitness_core.agents.agent_models import FitnessPlan
-                
-                # Simple parsing - this can be enhanced based on actual output format
-                lines = content.split('\n')
-                name = "Generated Fitness Plan"
-                training_plan = "Training plan details from tool"
-                meal_plan = "Meal plan details from tool"
-                
-                # Try to extract actual content if possible
-                for line in lines:
-                    if line.startswith("**") and "Plan" in line:
-                        name = line.strip("*").strip()
-                        break
-                
-                # Create and save the fitness plan
-                fitness_plan = FitnessPlan(
-                    name=name,
-                    training_plan=training_plan,
-                    meal_plan=meal_plan
-                )
-                
-                session = SessionManager.get_or_create_session()
-                session.set_fitness_plan(fitness_plan)
-                logger.info(f"Successfully parsed and saved fitness plan: {name}")
-                
-        except Exception as e:
-            logger.error(f"Error parsing fitness plan from content: {str(e)}")
-
-    @staticmethod
     def toggle_audio_visibility(tts_enabled: bool) -> gr.Audio:
         """
         Toggle the visibility of the audio component based on TTS setting.
@@ -745,11 +627,7 @@ Please check your API keys and try a different model."""
         Returns:
             Tuple of components to update
         """
-        print("=== START VOICE CONVERSATION HANDLER CALLED ===")
-        logger.info("=== START VOICE CONVERSATION HANDLER CALLED ===")
-        
         try:
-            logger.info("=== START VOICE CONVERSATION BUTTON CLICKED ===")
             global conversation_manager
             
             # Start voice conversation with the main conversation manager for context continuity
@@ -763,8 +641,7 @@ Please check your API keys and try a different model."""
             )
         except Exception as e:
             logger.error(f"Error starting voice conversation: {e}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Voice conversation error details", exc_info=True)
             return (
                 VoiceConversationState(),
                 "❌ Error starting voice conversation"
@@ -843,7 +720,5 @@ Please check your API keys and try a different model."""
                 yield updated_state, gradio_conversation, audio_file
                 
         except Exception as e:
-            logger.error(f"Error handling voice input: {e}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Error handling voice input: {e}", exc_info=True)
             yield voice_state, main_chatbot or [], None
