@@ -1,6 +1,7 @@
 """
 Fitness agent tools with grouped function and prompt definitions.
 """
+import logging
 from typing import Optional, Any, Dict, List
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -8,6 +9,8 @@ from agents import function_tool, RunContextWrapper
 
 from .fitness_plan_model import FitnessPlan, TrainingDay, IntensityLevel
 from .user_session import SessionManager, UserProfile
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -38,32 +41,57 @@ def build_fitness_schedule(fitness_plan: FitnessPlan, start_date: Optional[date]
     Returns:
         List of ScheduledTrainingDay objects with assigned dates
     """
+    logger.info(f"Building fitness schedule for plan: {fitness_plan.name}")
+    
     if start_date is None:
         start_date = fitness_plan.start_date or date.today()
+    logger.info(f"Schedule start date: {start_date}")
     
     # Use target_date as end_date if available
     end_date = fitness_plan.target_date
+    logger.info(f"Schedule end date: {end_date}")
     
     schedule = []
     current_date = start_date
+    logger.info(f"Training plan has {len(fitness_plan.training_plan.training_periods)} periods")
     
     # Process training periods in order
-    for period in fitness_plan.training_plan.training_periods:
+    for period_idx, period in enumerate(fitness_plan.training_plan.training_periods):
+        logger.info(f"Processing period {period_idx + 1}: {period.name}")
+        
         # Use period's start_date if provided, otherwise use current_date
         period_start_date = period.start_date if period.start_date else current_date
         period_current_date = period_start_date
+        logger.info(f"Period {period_idx + 1} starts on: {period_start_date}")
+        
+        # Determine this period's end date
+        next_period = None
+        if period_idx < len(fitness_plan.training_plan.training_periods) - 1:
+            next_period = fitness_plan.training_plan.training_periods[period_idx + 1]
+            period_end_date = next_period.start_date - timedelta(days=1)
+            logger.info(f"Period {period_idx + 1} ends on: {period_end_date} (before next period)")
+        else:
+            # Last period goes until the plan's target date
+            period_end_date = end_date
+            logger.info(f"Period {period_idx + 1} ends on: {period_end_date} (plan end date)")
         
         # Get the training split for this period
         training_split = period.training_split
+        logger.info(f"Period {period_idx + 1} using split: {training_split.name} with {len(training_split.training_days)} days")
         
         # Calculate how many days this split's cycle is
         week_number = 1
         
-        # Continue cycling through the split until we reach the end date or move to next period
-        while (end_date is None or period_current_date <= end_date):
+        # Continue cycling through the split until we reach the period end date or plan end date
+        while (period_end_date is None or period_current_date <= period_end_date) and (end_date is None or period_current_date <= end_date):
+            logger.debug(f"Starting week {week_number} of {training_split.name} on {period_current_date}")
+            cycle_completed = True
+            
             for day_idx, training_day in enumerate(training_split.training_days):
-                # Stop if we've reached the end date
-                if end_date and period_current_date > end_date:
+                # Stop if we've reached the period end date or plan end date
+                if (period_end_date and period_current_date > period_end_date) or (end_date and period_current_date > end_date):
+                    logger.debug(f"Stopping at {period_current_date} - reached end date")
+                    cycle_completed = False
                     break
                     
                 scheduled_day = ScheduledTrainingDay(
@@ -74,18 +102,19 @@ def build_fitness_schedule(fitness_plan: FitnessPlan, start_date: Optional[date]
                     day_in_week=day_idx + 1
                 )
                 schedule.append(scheduled_day)
+                logger.debug(f"Scheduled {training_day.name} on {period_current_date} (Week {week_number}, Day {day_idx + 1})")
                 period_current_date += timedelta(days=1)
             
-            # Increment week number after completing a full cycle
-            week_number += 1
-            
-            # For now, break after one cycle of the split to move to next period
-            # TODO: Add logic to determine when to move to next period based on duration
-            break
+            # Only increment week number if we completed a full cycle
+            if cycle_completed:
+                week_number += 1
+                logger.debug(f"Completed full cycle, moving to week {week_number}")
         
         # Update current_date for the next period
         current_date = period_current_date
+        logger.info(f"Period {period_idx + 1} completed. Next period will start from: {current_date}")
     
+    logger.info(f"Schedule built successfully with {len(schedule)} scheduled days")
     return schedule
 
 
@@ -149,17 +178,32 @@ async def create_fitness_plan(
         fitness_plan: A fully completed FitnessPlan object with name, training_plan, and meal_plan
     """
     try:
+        logger.info(f"Creating fitness plan: {fitness_plan.name}")
+        logger.info(f"Plan goal: {fitness_plan.goal}")
+        logger.info(f"Plan start date: {fitness_plan.start_date}")
+        logger.info(f"Plan target date: {fitness_plan.target_date}")
+        
         # Get or create user session
+        logger.debug("Getting or creating user session")
         session = SessionManager.get_or_create_session()
+        logger.info(f"User session obtained: {session.session_id}")
         
         # Save the fitness plan to the user session
+        logger.debug("Saving fitness plan to user session")
         session.set_fitness_plan(fitness_plan)
+        logger.info("Fitness plan saved to session successfully")
         
         # Build the schedule from the fitness plan
+        logger.info("Building fitness schedule from plan")
         schedule = build_fitness_schedule(fitness_plan)
+        logger.info(f"Schedule built with {len(schedule)} days")
+        
+        logger.debug("Formatting schedule summary")
         schedule_summary = format_schedule_summary(schedule)
+        logger.debug("Schedule summary formatted successfully")
         
         # Format the plan for display
+        logger.debug("Formatting plan for display")
         formatted_plan = f"""**{fitness_plan.name}**
 
 **Goal:** {fitness_plan.goal}
@@ -177,12 +221,16 @@ async def create_fitness_plan(
             duration_days = (fitness_plan.target_date - fitness_plan.start_date).days
             duration_weeks = duration_days // 7
             duration_text = f"{duration_weeks}-week"
+            logger.info(f"Plan duration: {duration_days} days ({duration_weeks} weeks)")
         else:
             duration_text = "customized"
+            logger.info("Plan duration: customized (no specific dates provided)")
         
+        logger.info("Fitness plan creation completed successfully")
         return f"I've created and saved your personalized fitness plan with a {duration_text} schedule:\n\n{formatted_plan}\n\nThis plan has been tailored specifically for your requirements and is now available in the fitness plan section below. Please consult with a healthcare provider before starting any new fitness program."
         
     except Exception as e:
+        logger.error(f"Error creating fitness plan: {str(e)}", exc_info=True)
         return f"I apologize, but I encountered an error while saving your fitness plan: {str(e)}. Please try again or contact support if the issue persists."
 
 
