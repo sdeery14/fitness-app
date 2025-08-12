@@ -198,6 +198,11 @@ async def create_fitness_plan(
         schedule = build_fitness_schedule(fitness_plan)
         logger.info(f"Schedule built with {len(schedule)} days")
         
+        # Save the schedule to the user session
+        logger.debug("Saving schedule to user session")
+        session.set_schedule(schedule)
+        logger.info("Schedule saved to session successfully")
+        
         logger.debug("Formatting schedule summary")
         schedule_summary = format_schedule_summary(schedule)
         logger.debug("Schedule summary formatted successfully")
@@ -333,20 +338,64 @@ async def get_training_schedule(
         if not session:
             return "No user session found. Please create a fitness plan first."
         
-        # Get the current fitness plan
-        fitness_plan = session.get_fitness_plan()
+        # First try to get the stored schedule
+        schedule = session.get_schedule()
         
-        if not fitness_plan:
-            return "No fitness plan is currently available. Please create a fitness plan first."
+        if not schedule:
+            # If no stored schedule, try to build it from the fitness plan
+            fitness_plan = session.get_fitness_plan()
+            
+            if not fitness_plan:
+                return "No fitness plan is currently available. Please create a fitness plan first."
+            
+            # Build and store the schedule
+            schedule = build_fitness_schedule(fitness_plan)
+            session.set_schedule(schedule)
         
-        # Build and format the schedule
-        schedule = build_fitness_schedule(fitness_plan)
+        # Format the schedule
         schedule_summary = format_schedule_summary(schedule, days_ahead)
         
         return f"Here's your upcoming training schedule:\n\n{schedule_summary}"
         
     except Exception as e:
         return f"I encountered an error while retrieving your training schedule: {str(e)}. Please try again."
+
+
+@function_tool
+async def get_schedule_data(
+    ctx: RunContextWrapper[Any],
+) -> List[ScheduledTrainingDay]:
+    """Get the raw training schedule data for calendar display.
+
+    Returns:
+        List of ScheduledTrainingDay objects for calendar interface
+    """
+    try:
+        # Get the current user session
+        session = SessionManager.get_current_session()
+        
+        if not session:
+            raise Exception("No user session found")
+        
+        # Get the stored schedule
+        schedule = session.get_schedule()
+        
+        if not schedule:
+            # If no stored schedule, try to build it from the fitness plan
+            fitness_plan = session.get_fitness_plan()
+            
+            if not fitness_plan:
+                raise Exception("No fitness plan available")
+            
+            # Build and store the schedule
+            schedule = build_fitness_schedule(fitness_plan)
+            session.set_schedule(schedule)
+        
+        return schedule
+        
+    except Exception as e:
+        logger.error(f"Error getting schedule data: {str(e)}", exc_info=True)
+        return []
 
 
 @function_tool
@@ -364,15 +413,10 @@ async def clear_user_session(
         if not session:
             return "No user session found to clear."
         
-        # Clear the fitness plan
-        session.clear_fitness_plan()
+        # Clear all user data including schedule
+        session.clear_all_data()
         
-        # Reset profile to defaults
-        session.profile = UserProfile()
-        session.workout_logs.clear()
-        session.measurements.clear()
-        
-        return "I've cleared all your session data including your profile and fitness plans. We can start fresh whenever you're ready!"
+        return "I've cleared all your session data including your profile, fitness plans, and training schedule. We can start fresh whenever you're ready!"
         
     except Exception as e:
         return f"I encountered an error while clearing your session: {str(e)}. Please try again."
@@ -454,6 +498,16 @@ FITNESS_TOOLS = {
         Use this tool when the user asks about their upcoming workouts, training schedule, or what they should do on specific days.
         
         The tool shows the next 14 days by default, but you can specify a different number of days if the user requests it.
+        
+        This tool requires that a fitness plan has already been created.
+        """
+    ),
+    "get_schedule_data": FunctionToolConfig(
+        function=get_schedule_data,
+        prompt_instructions="""
+        Use this tool to get raw schedule data for calendar interfaces or when the system needs access to the ScheduledTrainingDay objects directly.
+        
+        This returns the actual schedule objects rather than formatted text, making it suitable for programmatic use.
         
         This tool requires that a fitness plan has already been created.
         """
