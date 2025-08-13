@@ -953,3 +953,361 @@ class UIComponents:
             
         except Exception as e:
             return f"Error parsing exercises: {str(e)}"
+
+    @staticmethod
+    def create_calendar_section() -> tuple:
+        """
+        Create the training calendar section with different view options.
+        
+        Returns:
+            Tuple of (calendar_html, view_selector, refresh_calendar_btn)
+        """
+        initial_calendar_html = UIComponents._get_initial_calendar_html()
+        
+        # Calendar display using HTML component
+        calendar_html = gr.HTML(
+            value=initial_calendar_html,
+            elem_id="training-calendar",
+            elem_classes=["calendar-container"]
+        )
+        
+        # View selector
+        with gr.Row():
+            view_selector = gr.Radio(
+                choices=["Month View", "Week View", "Day View"],
+                value="Month View",
+                label="Calendar View",
+                elem_classes=["calendar-view-selector"]
+            )
+            
+            refresh_calendar_btn = gr.Button(
+                "🔄 Refresh Calendar",
+                variant="secondary",
+                size="sm"
+            )
+        
+        return calendar_html, view_selector, refresh_calendar_btn
+
+    @staticmethod
+    def _get_initial_calendar_html() -> str:
+        """Generate initial calendar HTML."""
+        return """
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <h3>📅 Training Schedule Calendar</h3>
+                <p>No schedule data available. Create a fitness plan to see your training calendar.</p>
+            </div>
+        </div>
+        """
+
+    @staticmethod
+    def generate_calendar_html(calendar_data: dict, view_type: str = "Month View") -> str:
+        """
+        Generate HTML for the calendar based on schedule data and view type.
+        
+        Args:
+            calendar_data: Calendar data from get_schedule_calendar_data()
+            view_type: Type of calendar view ("Month View", "Week View", "Day View")
+            
+        Returns:
+            HTML string for the calendar
+        """
+        if calendar_data.get("error"):
+            return f"""
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <h3>📅 Training Schedule Calendar</h3>
+                    <p class="error">Error: {calendar_data['error']}</p>
+                </div>
+            </div>
+            """
+        
+        events = calendar_data.get("events", [])
+        if not events:
+            return UIComponents._get_initial_calendar_html()
+        
+        if view_type == "Month View":
+            return UIComponents._generate_month_view_html(events)
+        elif view_type == "Week View":
+            return UIComponents._generate_week_view_html(events)
+        elif view_type == "Day View":
+            return UIComponents._generate_day_view_html(events)
+        else:
+            return UIComponents._generate_month_view_html(events)
+
+    @staticmethod
+    def _generate_month_view_html(events: List[dict]) -> str:
+        """Generate month view calendar HTML."""
+        from datetime import datetime, date
+        from calendar import monthrange
+        import calendar
+        
+        # Get current month or first event month
+        if events:
+            first_date = datetime.fromisoformat(events[0]["date"]).date()
+            current_month = first_date.month
+            current_year = first_date.year
+        else:
+            today = date.today()
+            current_month = today.month
+            current_year = today.year
+        
+        # Create events lookup by date
+        events_by_date = {}
+        for event in events:
+            event_date = event["date"]
+            if event_date not in events_by_date:
+                events_by_date[event_date] = []
+            events_by_date[event_date].append(event)
+        
+        # Generate calendar HTML
+        month_name = calendar.month_name[current_month]
+        
+        html = f"""
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <h3>📅 {month_name} {current_year} - Training Schedule</h3>
+            </div>
+            <div class="calendar-grid month-view">
+                <div class="calendar-header-row">
+                    <div class="day-header">Sun</div>
+                    <div class="day-header">Mon</div>
+                    <div class="day-header">Tue</div>
+                    <div class="day-header">Wed</div>
+                    <div class="day-header">Thu</div>
+                    <div class="day-header">Fri</div>
+                    <div class="day-header">Sat</div>
+                </div>
+        """
+        
+        # Get first day of month and number of days
+        first_weekday, days_in_month = monthrange(current_year, current_month)
+        
+        # Generate calendar days
+        day_count = 1
+        week_count = 0
+        
+        while day_count <= days_in_month:
+            html += '<div class="calendar-week">'
+            
+            for weekday in range(7):
+                if week_count == 0 and weekday < first_weekday:
+                    # Empty cell before month starts
+                    html += '<div class="day-cell empty"></div>'
+                elif day_count <= days_in_month:
+                    # Regular day cell
+                    current_date = date(current_year, current_month, day_count)
+                    date_str = current_date.isoformat()
+                    
+                    day_events = events_by_date.get(date_str, [])
+                    
+                    # Determine if today
+                    is_today = current_date == date.today()
+                    today_class = "today" if is_today else ""
+                    
+                    html += f'<div class="day-cell {today_class}" data-date="{date_str}">'
+                    html += f'<div class="day-number">{day_count}</div>'
+                    
+                    # Add events for this day
+                    if day_events:
+                        html += '<div class="day-events">'
+                        for event in day_events[:2]:  # Show max 2 events
+                            event_class = "rest-day" if event["is_rest_day"] else "training-day"
+                            html += f'''
+                                <div class="event {event_class}" style="background-color: {event['color']};" 
+                                     title="{event['title']} - {event['description']}">
+                                    {event['title'][:15]}{'...' if len(event['title']) > 15 else ''}
+                                </div>
+                            '''
+                        if len(day_events) > 2:
+                            html += f'<div class="more-events">+{len(day_events) - 2} more</div>'
+                        html += '</div>'
+                    
+                    html += '</div>'
+                    day_count += 1
+                else:
+                    # Empty cell after month ends
+                    html += '<div class="day-cell empty"></div>'
+            
+            html += '</div>'
+            week_count += 1
+        
+        html += """
+            </div>
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <div class="legend-color rest-day" style="background-color: #95a5a6;"></div>
+                    <span>Rest Day</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #2ecc71;"></div>
+                    <span>Light Intensity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #f39c12;"></div>
+                    <span>Moderate Intensity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e74c3c;"></div>
+                    <span>Heavy Intensity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #9b59b6;"></div>
+                    <span>Max Effort</span>
+                </div>
+            </div>
+        </div>
+        """
+        
+        return html
+
+    @staticmethod
+    def _generate_week_view_html(events: List[dict]) -> str:
+        """Generate week view calendar HTML."""
+        from datetime import datetime, date, timedelta
+        
+        # Get current week or first event week
+        if events:
+            first_date = datetime.fromisoformat(events[0]["date"]).date()
+            # Get start of week (Monday)
+            week_start = first_date - timedelta(days=first_date.weekday())
+        else:
+            today = date.today()
+            week_start = today - timedelta(days=today.weekday())
+        
+        week_end = week_start + timedelta(days=6)
+        
+        # Create events lookup by date
+        events_by_date = {}
+        for event in events:
+            event_date = event["date"]
+            if event_date not in events_by_date:
+                events_by_date[event_date] = []
+            events_by_date[event_date].append(event)
+        
+        html = f"""
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <h3>📅 Week of {week_start.strftime('%B %d')} - {week_end.strftime('%B %d, %Y')}</h3>
+            </div>
+            <div class="calendar-grid week-view">
+        """
+        
+        # Generate week days
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        
+        for i, day_name in enumerate(days):
+            current_date = week_start + timedelta(days=i)
+            date_str = current_date.isoformat()
+            day_events = events_by_date.get(date_str, [])
+            
+            is_today = current_date == date.today()
+            today_class = "today" if is_today else ""
+            
+            html += f'''
+            <div class="week-day {today_class}">
+                <div class="week-day-header">
+                    <h4>{day_name}</h4>
+                    <span class="date">{current_date.strftime('%m/%d')}</span>
+                </div>
+                <div class="week-day-events">
+            '''
+            
+            if day_events:
+                for event in day_events:
+                    event_class = "rest-day" if event["is_rest_day"] else "training-day"
+                    html += f'''
+                        <div class="week-event {event_class}" style="border-left: 4px solid {event['color']};">
+                            <div class="event-title">{event['title']}</div>
+                            <div class="event-details">
+                                {event['description'] if event['description'] else ''}
+                            </div>
+                            {f"<div class='event-intensity'>Intensity: {event['intensity'].title()}</div>" if event['intensity'] and not event['is_rest_day'] else ''}
+                        </div>
+                    '''
+            else:
+                html += '<div class="no-events">No training scheduled</div>'
+            
+            html += '</div></div>'
+        
+        html += '</div></div>'
+        return html
+
+    @staticmethod
+    def _generate_day_view_html(events: List[dict]) -> str:
+        """Generate day view calendar HTML."""
+        from datetime import datetime, date
+        
+        # Get today or first event date
+        if events:
+            target_date = datetime.fromisoformat(events[0]["date"]).date()
+        else:
+            target_date = date.today()
+        
+        date_str = target_date.isoformat()
+        
+        # Find events for target date
+        day_events = [event for event in events if event["date"] == date_str]
+        
+        html = f"""
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <h3>📅 {target_date.strftime('%A, %B %d, %Y')}</h3>
+            </div>
+            <div class="day-view">
+        """
+        
+        if day_events:
+            for event in day_events:
+                if event["is_rest_day"]:
+                    html += f'''
+                    <div class="day-event rest-day">
+                        <h4>😴 Rest Day</h4>
+                        <p>Focus on recovery, light stretching, or gentle activities.</p>
+                    </div>
+                    '''
+                else:
+                    html += f'''
+                    <div class="day-event training-day" style="border-left: 6px solid {event['color']};">
+                        <h4>💪 {event['title']}</h4>
+                        {f"<p class='event-description'>{event['description']}</p>" if event['description'] else ''}
+                        {f"<p class='intensity'>Intensity: {event['intensity'].title()}</p>" if event['intensity'] else ''}
+                        
+                        <div class="exercises-list">
+                            <h5>Exercises:</h5>
+                    '''
+                    
+                    if event['exercises']:
+                        for i, exercise in enumerate(event['exercises'], 1):
+                            html += f'''
+                            <div class="exercise-item">
+                                <strong>{i}. {exercise['name']}</strong>
+                            '''
+                            
+                            details = []
+                            if exercise['sets']: details.append(f"{exercise['sets']} sets")
+                            if exercise['reps']: details.append(f"{exercise['reps']} reps")
+                            if exercise['duration']: details.append(f"{exercise['duration']}s")
+                            if exercise['distance']: details.append(f"{exercise['distance']}m")
+                            
+                            if details:
+                                html += f"<br><em>{' × '.join(details)}</em>"
+                            
+                            if exercise['description']:
+                                html += f"<br><span class='exercise-description'>{exercise['description']}</span>"
+                            
+                            html += '</div>'
+                    else:
+                        html += '<p>No specific exercises defined.</p>'
+                    
+                    html += '</div></div>'
+        else:
+            html += '''
+            <div class="day-event no-training">
+                <h4>No Training Scheduled</h4>
+                <p>No workouts planned for this day.</p>
+            </div>
+            '''
+        
+        html += '</div></div>'
+        return html

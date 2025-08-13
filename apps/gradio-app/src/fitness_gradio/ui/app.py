@@ -60,6 +60,12 @@ class FitnessAppUI:
                     # Fitness plan section (right side)
                     plan_display, view_plan_btn, clear_plan_btn = UIComponents.create_fitness_plan_section()
             
+            # Calendar section - full width row
+            with gr.Row():
+                with gr.Column():
+                    gr.Markdown("## 📅 Training Schedule Calendar")
+                    calendar_html, calendar_view_selector, refresh_calendar_btn = UIComponents.create_calendar_section()
+            
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
             
@@ -81,7 +87,8 @@ class FitnessAppUI:
                 model_dropdown, selected_model, output_audio,
                 voice_btn, voice_status, voice_audio, voice_output, 
                 voice_exit_btn, voice_row, voice_state,
-                plan_display, view_plan_btn, clear_plan_btn
+                plan_display, view_plan_btn, clear_plan_btn,
+                calendar_html, calendar_view_selector, refresh_calendar_btn
             )
     
     def _setup_event_handlers(
@@ -103,7 +110,10 @@ class FitnessAppUI:
         voice_state: gr.State,
         plan_display: gr.Markdown,
         view_plan_btn: gr.Button,
-        clear_plan_btn: gr.Button
+        clear_plan_btn: gr.Button,
+        calendar_html: gr.HTML,
+        calendar_view_selector: gr.Radio,
+        refresh_calendar_btn: gr.Button
     ) -> None:
         """Set up all event handlers."""
         
@@ -242,6 +252,33 @@ class FitnessAppUI:
         clear_plan_btn.click(
             UIHandlers.clear_fitness_plan,
             outputs=[plan_display]
+        )
+        
+        # Calendar event handlers
+        refresh_calendar_btn.click(
+            UIHandlers.refresh_calendar,
+            inputs=[calendar_view_selector],
+            outputs=[calendar_html]
+        )
+        
+        calendar_view_selector.change(
+            UIHandlers.refresh_calendar,
+            inputs=[calendar_view_selector],
+            outputs=[calendar_html]
+        )
+        
+        # Update calendar after bot responses (when new fitness plans are created)
+        bot_msg.then(
+            UIHandlers.refresh_calendar,
+            inputs=[calendar_view_selector],
+            outputs=[calendar_html]
+        )
+        
+        # Update calendar after voice responses 
+        voice_response.then(
+            UIHandlers.refresh_calendar,
+            inputs=[calendar_view_selector],
+            outputs=[calendar_html]
         )
     
     def launch(self, **kwargs) -> None:

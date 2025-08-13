@@ -674,6 +674,135 @@ Please check your API keys and try a different model."""
             return voice_state, "❌ Error ending voice conversation"
 
     @staticmethod
+    def get_schedule_calendar_data() -> Dict[str, Any]:
+        """
+        Get schedule data formatted for calendar display.
+        
+        Returns:
+            Dictionary containing calendar events and metadata
+        """
+        try:
+            session = SessionManager.get_current_session()
+            
+            if not session:
+                return {"events": [], "error": "No user session found"}
+            
+            # Get the stored schedule
+            schedule = session.get_schedule()
+            
+            if not schedule:
+                # Try to build from fitness plan if available
+                fitness_plan = session.get_fitness_plan()
+                if fitness_plan:
+                    from fitness_core.agents.tools import build_fitness_schedule
+                    schedule = build_fitness_schedule(fitness_plan)
+                    session.set_schedule(schedule)
+                else:
+                    return {"events": [], "error": "No fitness plan available"}
+            
+            # Convert schedule to calendar events format
+            events = []
+            for scheduled_day in schedule:
+                # Determine event type and color
+                is_rest_day = (
+                    not scheduled_day.training_day.exercises or 
+                    len(scheduled_day.training_day.exercises) == 0 or
+                    (scheduled_day.training_day.intensity and 
+                     scheduled_day.training_day.intensity.value == "rest")
+                )
+                
+                # Set event properties based on training day
+                if is_rest_day:
+                    event_color = "#95a5a6"  # Gray for rest days
+                    event_title = f"Rest Day"
+                else:
+                    intensity = scheduled_day.training_day.intensity
+                    if intensity:
+                        intensity_colors = {
+                            "light": "#2ecc71",      # Green
+                            "moderate": "#f39c12",    # Orange
+                            "heavy": "#e74c3c",       # Red
+                            "max_effort": "#9b59b6"   # Purple
+                        }
+                        event_color = intensity_colors.get(intensity.value, "#3498db")
+                    else:
+                        event_color = "#3498db"  # Blue default
+                    
+                    exercise_count = len(scheduled_day.training_day.exercises) if scheduled_day.training_day.exercises else 0
+                    event_title = f"{scheduled_day.training_day.name} ({exercise_count} exercises)"
+                
+                # Create event object
+                event = {
+                    "id": f"training_{scheduled_day.date.isoformat()}",
+                    "title": event_title,
+                    "date": scheduled_day.date.isoformat(),
+                    "color": event_color,
+                    "description": scheduled_day.training_day.description or "",
+                    "split_name": scheduled_day.split_name,
+                    "week_number": scheduled_day.week_number,
+                    "day_in_week": scheduled_day.day_in_week,
+                    "intensity": scheduled_day.training_day.intensity.value if scheduled_day.training_day.intensity else None,
+                    "is_rest_day": is_rest_day,
+                    "exercises": [
+                        {
+                            "name": ex.name,
+                            "description": ex.description or "",
+                            "sets": ex.sets,
+                            "reps": ex.reps,
+                            "duration": ex.duration,
+                            "distance": ex.distance
+                        }
+                        for ex in (scheduled_day.training_day.exercises or [])
+                    ]
+                }
+                events.append(event)
+            
+            return {
+                "events": events,
+                "total_days": len(events),
+                "start_date": min(e["date"] for e in events) if events else None,
+                "end_date": max(e["date"] for e in events) if events else None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting calendar data: {str(e)}")
+            return {"events": [], "error": str(e)}
+
+    @staticmethod
+    def refresh_calendar(view_type: str = "Month View") -> str:
+        """
+        Refresh the calendar display with current schedule data.
+        
+        Args:
+            view_type: Type of calendar view to display
+            
+        Returns:
+            Updated calendar HTML
+        """
+        try:
+            from .components import UIComponents
+            
+            # Get calendar data
+            calendar_data = UIHandlers.get_schedule_calendar_data()
+            
+            # Generate HTML for the requested view
+            calendar_html = UIComponents.generate_calendar_html(calendar_data, view_type)
+            
+            logger.info(f"Calendar refreshed with {len(calendar_data.get('events', []))} events in {view_type}")
+            return calendar_html
+            
+        except Exception as e:
+            logger.error(f"Error refreshing calendar: {str(e)}")
+            return f"""
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <h3>📅 Training Schedule Calendar</h3>
+                    <p class="error">Error loading calendar: {str(e)}</p>
+                </div>
+            </div>
+            """
+
+    @staticmethod
     def handle_voice_input(
         voice_state: VoiceConversationState, 
         audio: tuple, 
