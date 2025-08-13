@@ -117,7 +117,11 @@ class FitnessAgent(Agent):
 
     def _build_system_prompt(self, tool_instructions: str) -> str:
         """Build the system prompt including user profile context."""
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         base_prompt = f"""You are a professional fitness and nutrition assistant with expertise in working with users to create a personalized fitness plan.
+
+Current date and time: {current_datetime}
 
 You create personalized plans by iteratively creating plans and asking the user for feedback.
 
