@@ -501,24 +501,38 @@ MAIN_CSS = """
     justify-content: center;
     gap: 20px;
     margin-top: 15px;
-    padding: 10px;
-    background-color: #f8f9fa;
+    padding: 15px;
+    background-color: rgba(248, 249, 250, 0.95);
+    border: 1px solid rgba(156, 163, 175, 0.3);
     border-radius: 8px;
     flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.85rem;
-    color: #5a6c7d;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.legend-item span {
+    color: #374151 !important;
+    font-weight: 500;
 }
 
 .legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Responsive Design */
@@ -561,6 +575,41 @@ MAIN_CSS = """
         font-size: 0.65rem;
         padding: 1px 2px;
     }
+}
+
+/* Dark theme support for calendar legend */
+.dark .calendar-legend {
+    background-color: rgba(31, 41, 55, 0.95);
+    border-color: rgba(75, 85, 99, 0.5);
+}
+
+.dark .legend-item {
+    color: #d1d5db;
+    background-color: rgba(55, 65, 81, 0.7);
+    border-color: rgba(75, 85, 99, 0.3);
+}
+
+.dark .legend-item span {
+    color: #d1d5db !important;
+}
+
+/* Global dark theme text override for calendar */
+[data-theme="dark"] .calendar-legend,
+.gradio-container.dark .calendar-legend {
+    background-color: rgba(31, 41, 55, 0.95) !important;
+    border-color: rgba(75, 85, 99, 0.5) !important;
+}
+
+[data-theme="dark"] .legend-item,
+.gradio-container.dark .legend-item {
+    color: #d1d5db !important;
+    background-color: rgba(55, 65, 81, 0.7) !important;
+    border-color: rgba(75, 85, 99, 0.3) !important;
+}
+
+[data-theme="dark"] .legend-item span,
+.gradio-container.dark .legend-item span {
+    color: #d1d5db !important;
 }
 """
 
