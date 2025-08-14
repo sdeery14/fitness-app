@@ -64,7 +64,7 @@ class FitnessAppUI:
             with gr.Row():
                 with gr.Column():
                     gr.Markdown("## 📅 Training Schedule Calendar")
-                    calendar_html, calendar_view_selector, refresh_calendar_btn = UIComponents.create_calendar_section()
+                    calendar_html, calendar_view_selector, calendar_prev_btn, calendar_next_btn, calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date = UIComponents.create_calendar_section()
             
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
@@ -88,7 +88,8 @@ class FitnessAppUI:
                 voice_btn, voice_status, voice_audio, voice_output, 
                 voice_exit_btn, voice_row, voice_state,
                 plan_display, view_plan_btn, clear_plan_btn,
-                calendar_html, calendar_view_selector, refresh_calendar_btn
+                calendar_html, calendar_view_selector, calendar_prev_btn, calendar_next_btn, 
+                calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date
             )
     
     def _setup_event_handlers(
@@ -113,7 +114,12 @@ class FitnessAppUI:
         clear_plan_btn: gr.Button,
         calendar_html: gr.HTML,
         calendar_view_selector: gr.Radio,
-        refresh_calendar_btn: gr.Button
+        calendar_prev_btn: gr.Button,
+        calendar_next_btn: gr.Button,
+        calendar_today_btn: gr.Button,
+        calendar_date_picker: gr.DateTime,
+        refresh_calendar_btn: gr.Button,
+        calendar_current_date: gr.Textbox
     ) -> None:
         """Set up all event handlers."""
         
@@ -256,28 +262,53 @@ class FitnessAppUI:
         
         # Calendar event handlers
         refresh_calendar_btn.click(
-            UIHandlers.refresh_calendar,
-            inputs=[calendar_view_selector],
+            UIHandlers.refresh_calendar_with_date,
+            inputs=[calendar_view_selector, calendar_current_date],
             outputs=[calendar_html]
         )
         
         calendar_view_selector.change(
-            UIHandlers.refresh_calendar,
-            inputs=[calendar_view_selector],
+            UIHandlers.refresh_calendar_with_date,
+            inputs=[calendar_view_selector, calendar_current_date],
             outputs=[calendar_html]
+        )
+        
+        # Calendar navigation handlers
+        calendar_prev_btn.click(
+            lambda current_date, view_type: UIHandlers.navigate_calendar(current_date, view_type, "prev"),
+            inputs=[calendar_current_date, calendar_view_selector],
+            outputs=[calendar_html, calendar_current_date]
+        )
+        
+        calendar_next_btn.click(
+            lambda current_date, view_type: UIHandlers.navigate_calendar(current_date, view_type, "next"),
+            inputs=[calendar_current_date, calendar_view_selector],
+            outputs=[calendar_html, calendar_current_date]
+        )
+        
+        calendar_today_btn.click(
+            UIHandlers.go_to_today,
+            inputs=[calendar_view_selector],
+            outputs=[calendar_html, calendar_current_date]
+        )
+        
+        calendar_date_picker.change(
+            UIHandlers.jump_to_date,
+            inputs=[calendar_date_picker, calendar_view_selector],
+            outputs=[calendar_html, calendar_current_date]
         )
         
         # Update calendar after bot responses (when new fitness plans are created)
         bot_msg.then(
-            UIHandlers.refresh_calendar,
-            inputs=[calendar_view_selector],
+            UIHandlers.refresh_calendar_with_date,
+            inputs=[calendar_view_selector, calendar_current_date],
             outputs=[calendar_html]
         )
         
         # Update calendar after voice responses 
         voice_response.then(
-            UIHandlers.refresh_calendar,
-            inputs=[calendar_view_selector],
+            UIHandlers.refresh_calendar_with_date,
+            inputs=[calendar_view_selector, calendar_current_date],
             outputs=[calendar_html]
         )
     

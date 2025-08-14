@@ -803,6 +803,147 @@ Please check your API keys and try a different model."""
             """
 
     @staticmethod
+    def refresh_calendar_with_date(view_type: str = "Month View", target_date_str: str = None) -> str:
+        """
+        Refresh the calendar display with current schedule data for a specific date.
+        
+        Args:
+            view_type: Type of calendar view to display
+            target_date_str: Target date in ISO format (optional)
+            
+        Returns:
+            Updated calendar HTML
+        """
+        try:
+            from .components import UIComponents
+            from datetime import datetime
+            
+            # Get calendar data
+            calendar_data = UIHandlers.get_schedule_calendar_data()
+            
+            # Parse target date if provided
+            target_date = None
+            if target_date_str:
+                try:
+                    target_date = datetime.fromisoformat(target_date_str).date()
+                except ValueError:
+                    logger.warning(f"Invalid date format: {target_date_str}, using default")
+            
+            # Generate HTML for the requested view with target date
+            calendar_html = UIComponents.generate_calendar_html(calendar_data, view_type, target_date)
+            
+            logger.info(f"Calendar refreshed with {len(calendar_data.get('events', []))} events in {view_type} for date {target_date_str or 'default'}")
+            return calendar_html
+            
+        except Exception as e:
+            logger.error(f"Error refreshing calendar with date: {str(e)}")
+            return f"""
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <h3>📅 Training Schedule Calendar</h3>
+                    <p class="error">Error loading calendar: {str(e)}</p>
+                </div>
+            </div>
+            """
+
+    @staticmethod
+    def navigate_calendar(current_date_str: str, view_type: str, direction: str) -> tuple:
+        """
+        Navigate the calendar in a specific direction.
+        
+        Args:
+            current_date_str: Current date being displayed in ISO format
+            view_type: Type of calendar view ("Month View", "Week View", "Day View")  
+            direction: Navigation direction ("prev" or "next")
+            
+        Returns:
+            Tuple of (updated_calendar_html, new_current_date)
+        """
+        try:
+            from .components import UIComponents
+            
+            # Calculate new date
+            new_date_str = UIComponents.calculate_navigation_date(current_date_str, view_type, direction)
+            
+            # Refresh calendar with new date
+            calendar_html = UIHandlers.refresh_calendar_with_date(view_type, new_date_str)
+            
+            return calendar_html, new_date_str
+            
+        except Exception as e:
+            logger.error(f"Error navigating calendar: {str(e)}")
+            # Return current state on error
+            current_calendar = UIHandlers.refresh_calendar_with_date(view_type, current_date_str)
+            return current_calendar, current_date_str
+
+    @staticmethod
+    def go_to_today(view_type: str) -> tuple:
+        """
+        Navigate the calendar to today's date.
+        
+        Args:
+            view_type: Type of calendar view to display
+            
+        Returns:
+            Tuple of (updated_calendar_html, today_date_str)
+        """
+        try:
+            from datetime import date
+            
+            today_str = date.today().isoformat()
+            calendar_html = UIHandlers.refresh_calendar_with_date(view_type, today_str)
+            
+            return calendar_html, today_str
+            
+        except Exception as e:
+            logger.error(f"Error going to today: {str(e)}")
+            return UIHandlers.refresh_calendar(view_type), date.today().isoformat()
+
+    @staticmethod
+    def jump_to_date(date_picker_value, view_type: str) -> tuple:
+        """
+        Jump the calendar to a specific date from the date picker.
+        
+        Args:
+            date_picker_value: Date value from the date picker component
+            view_type: Type of calendar view to display
+            
+        Returns:
+            Tuple of (updated_calendar_html, target_date_str)
+        """
+        try:
+            from datetime import datetime, date
+            
+            # Handle different date picker formats
+            if isinstance(date_picker_value, str):
+                if 'T' in date_picker_value:
+                    # ISO datetime format
+                    target_date = datetime.fromisoformat(date_picker_value.split('T')[0]).date()
+                else:
+                    # ISO date format
+                    target_date = datetime.fromisoformat(date_picker_value).date()
+            elif hasattr(date_picker_value, 'date'):
+                # DateTime object
+                target_date = date_picker_value.date()
+            elif isinstance(date_picker_value, date):
+                # Date object
+                target_date = date_picker_value
+            else:
+                # Fallback to today
+                target_date = date.today()
+            
+            target_date_str = target_date.isoformat()
+            calendar_html = UIHandlers.refresh_calendar_with_date(view_type, target_date_str)
+            
+            logger.info(f"Jumped to date: {target_date_str}")
+            return calendar_html, target_date_str
+            
+        except Exception as e:
+            logger.error(f"Error jumping to date: {str(e)}")
+            today_str = date.today().isoformat()
+            return UIHandlers.refresh_calendar(view_type), today_str
+
+    @staticmethod
     def handle_voice_input(
         voice_state: VoiceConversationState, 
         audio: tuple, 

@@ -237,6 +237,36 @@ MAIN_CSS = """
     font-size: 1.5rem;
 }
 
+/* Calendar Navigation Styles */
+.calendar-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.nav-btn {
+    min-width: 100px !important;
+    font-weight: 500 !important;
+}
+
+.today-btn {
+    min-width: 80px !important;
+    font-weight: 600 !important;
+}
+
+.calendar-view-selector {
+    margin-bottom: 10px !important;
+}
+
+.date-picker {
+    max-width: 200px !important;
+}
+
 /* Month View Styles */
 .calendar-grid.month-view {
     display: flex;

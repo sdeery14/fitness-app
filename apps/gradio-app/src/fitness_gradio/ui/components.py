@@ -955,13 +955,69 @@ class UIComponents:
             return f"Error parsing exercises: {str(e)}"
 
     @staticmethod
+    def calculate_navigation_date(current_date_str: str, view_type: str, direction: str) -> str:
+        """
+        Calculate the new date for calendar navigation.
+        
+        Args:
+            current_date_str: Current date in ISO format
+            view_type: Type of calendar view ("Month View", "Week View", "Day View")
+            direction: Navigation direction ("prev" or "next")
+            
+        Returns:
+            New date in ISO format
+        """
+        from datetime import datetime, timedelta
+        
+        try:
+            current_date = datetime.fromisoformat(current_date_str).date()
+            
+            if view_type == "Month View":
+                if direction == "prev":
+                    # Go to first day of previous month
+                    if current_date.month == 1:
+                        new_date = current_date.replace(year=current_date.year - 1, month=12, day=1)
+                    else:
+                        new_date = current_date.replace(month=current_date.month - 1, day=1)
+                else:  # next
+                    # Go to first day of next month
+                    if current_date.month == 12:
+                        new_date = current_date.replace(year=current_date.year + 1, month=1, day=1)
+                    else:
+                        new_date = current_date.replace(month=current_date.month + 1, day=1)
+                        
+            elif view_type == "Week View":
+                delta = timedelta(weeks=1)
+                if direction == "prev":
+                    new_date = current_date - delta
+                else:  # next
+                    new_date = current_date + delta
+                    
+            elif view_type == "Day View":
+                delta = timedelta(days=1)
+                if direction == "prev":
+                    new_date = current_date - delta
+                else:  # next
+                    new_date = current_date + delta
+            else:
+                new_date = current_date
+                
+            return new_date.isoformat()
+            
+        except Exception as e:
+            # Return today's date as fallback
+            return date.today().isoformat()
+
+    @staticmethod
     def create_calendar_section() -> tuple:
         """
-        Create the training calendar section with different view options.
+        Create the training calendar section with navigation controls and view options.
         
         Returns:
-            Tuple of (calendar_html, view_selector, refresh_calendar_btn)
+            Tuple of (calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date)
         """
+        from datetime import date
+        
         initial_calendar_html = UIComponents._get_initial_calendar_html()
         
         # Calendar display using HTML component
@@ -971,22 +1027,63 @@ class UIComponents:
             elem_classes=["calendar-container"]
         )
         
-        # View selector
+        # Navigation controls
+        with gr.Row(elem_classes=["calendar-navigation"]):
+            prev_btn = gr.Button(
+                "◀ Previous",
+                variant="secondary",
+                size="sm",
+                elem_classes=["nav-btn"]
+            )
+            
+            today_btn = gr.Button(
+                "📅 Today",
+                variant="primary",
+                size="sm",
+                elem_classes=["today-btn"]
+            )
+            
+            next_btn = gr.Button(
+                "Next ▶",
+                variant="secondary", 
+                size="sm",
+                elem_classes=["nav-btn"]
+            )
+        
+        # View and date controls
         with gr.Row():
             view_selector = gr.Radio(
                 choices=["Month View", "Week View", "Day View"],
                 value="Month View",
                 label="Calendar View",
-                elem_classes=["calendar-view-selector"]
+                elem_classes=["calendar-view-selector"],
+                scale=2
+            )
+            
+            # Date picker for jumping to specific dates
+            date_picker = gr.DateTime(
+                value=date.today().isoformat(),
+                label="Jump to Date",
+                info="Select a date to navigate to",
+                elem_classes=["date-picker"],
+                scale=1
             )
             
             refresh_calendar_btn = gr.Button(
-                "🔄 Refresh Calendar",
+                "🔄 Refresh",
                 variant="secondary",
-                size="sm"
+                size="sm",
+                scale=1
             )
         
-        return calendar_html, view_selector, refresh_calendar_btn
+        # Hidden component to track current date being displayed
+        current_date = gr.Textbox(
+            value=date.today().isoformat(),
+            visible=False,
+            label="Current Display Date"
+        )
+        
+        return calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date
 
     @staticmethod
     def _get_initial_calendar_html() -> str:
@@ -1001,13 +1098,14 @@ class UIComponents:
         """
 
     @staticmethod
-    def generate_calendar_html(calendar_data: dict, view_type: str = "Month View") -> str:
+    def generate_calendar_html(calendar_data: dict, view_type: str = "Month View", target_date: date = None) -> str:
         """
         Generate HTML for the calendar based on schedule data and view type.
         
         Args:
             calendar_data: Calendar data from get_schedule_calendar_data()
             view_type: Type of calendar view ("Month View", "Week View", "Day View")
+            target_date: Specific date to display (defaults to today or first event date)
             
         Returns:
             HTML string for the calendar
@@ -1027,23 +1125,26 @@ class UIComponents:
             return UIComponents._get_initial_calendar_html()
         
         if view_type == "Month View":
-            return UIComponents._generate_month_view_html(events)
+            return UIComponents._generate_month_view_html(events, target_date)
         elif view_type == "Week View":
-            return UIComponents._generate_week_view_html(events)
+            return UIComponents._generate_week_view_html(events, target_date)
         elif view_type == "Day View":
-            return UIComponents._generate_day_view_html(events)
+            return UIComponents._generate_day_view_html(events, target_date)
         else:
-            return UIComponents._generate_month_view_html(events)
+            return UIComponents._generate_month_view_html(events, target_date)
 
     @staticmethod
-    def _generate_month_view_html(events: List[dict]) -> str:
+    def _generate_month_view_html(events: List[dict], target_date: date = None) -> str:
         """Generate month view calendar HTML."""
         from datetime import datetime, date
         from calendar import monthrange
         import calendar
         
-        # Get current month or first event month
-        if events:
+        # Determine the target month/year
+        if target_date:
+            current_month = target_date.month
+            current_year = target_date.year
+        elif events:
             first_date = datetime.fromisoformat(events[0]["date"]).date()
             current_month = first_date.month
             current_year = first_date.year
@@ -1162,12 +1263,15 @@ class UIComponents:
         return html
 
     @staticmethod
-    def _generate_week_view_html(events: List[dict]) -> str:
+    def _generate_week_view_html(events: List[dict], target_date: date = None) -> str:
         """Generate week view calendar HTML."""
         from datetime import datetime, date, timedelta
         
-        # Get current week or first event week
-        if events:
+        # Determine the target week
+        if target_date:
+            # Get start of week (Monday) for target date
+            week_start = target_date - timedelta(days=target_date.weekday())
+        elif events:
             first_date = datetime.fromisoformat(events[0]["date"]).date()
             # Get start of week (Monday)
             week_start = first_date - timedelta(days=first_date.weekday())
@@ -1234,17 +1338,19 @@ class UIComponents:
         return html
 
     @staticmethod
-    def _generate_day_view_html(events: List[dict]) -> str:
+    def _generate_day_view_html(events: List[dict], target_date: date = None) -> str:
         """Generate day view calendar HTML."""
         from datetime import datetime, date
         
-        # Get today or first event date
-        if events:
-            target_date = datetime.fromisoformat(events[0]["date"]).date()
+        # Determine the target date
+        if target_date:
+            display_date = target_date
+        elif events:
+            display_date = datetime.fromisoformat(events[0]["date"]).date()
         else:
-            target_date = date.today()
+            display_date = date.today()
         
-        date_str = target_date.isoformat()
+        date_str = display_date.isoformat()
         
         # Find events for target date
         day_events = [event for event in events if event["date"] == date_str]
@@ -1252,7 +1358,7 @@ class UIComponents:
         html = f"""
         <div class="calendar-wrapper">
             <div class="calendar-header">
-                <h3>📅 {target_date.strftime('%A, %B %d, %Y')}</h3>
+                <h3>📅 {display_date.strftime('%A, %B %d, %Y')}</h3>
             </div>
             <div class="day-view">
         """
