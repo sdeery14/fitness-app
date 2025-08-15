@@ -953,18 +953,15 @@ Please check your API keys and try a different model."""
             from datetime import datetime, date
             import re
             
-            # Debug logging to understand the input format
             logger.info(f"jump_to_date received: {date_picker_value} (type: {type(date_picker_value)})")
             
             target_date = None
             
             # Handle None or empty values
             if date_picker_value is None:
-                logger.info("Received None value, using today")
                 target_date = date.today()
             elif isinstance(date_picker_value, (int, float)):
                 # Unix timestamp (most common case for gr.DateTime)
-                logger.info(f"Processing Unix timestamp: {date_picker_value}")
                 try:
                     target_date = datetime.fromtimestamp(date_picker_value).date()
                 except (ValueError, OSError) as e:
@@ -973,32 +970,25 @@ Please check your API keys and try a different model."""
             elif isinstance(date_picker_value, str):
                 # String input - handle various formats
                 date_str = date_picker_value.strip()
-                logger.info(f"Processing string date: '{date_str}'")
                 
                 if not date_str:
-                    logger.warning("Empty date string received")
                     target_date = date.today()
                 elif 'T' in date_str:
                     # ISO datetime format (2024-12-25T00:00:00)
-                    logger.info("Parsing as ISO datetime format")
                     target_date = datetime.fromisoformat(date_str.split('T')[0]).date()
                 elif re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
                     # ISO date format (2024-12-25) - most common from gr.DateTime
-                    logger.info("Parsing as ISO date format")
                     target_date = datetime.fromisoformat(date_str).date()
                 elif re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', date_str):
                     # US date format (12/25/2024)
-                    logger.info("Parsing as US date format")
                     month, day, year = map(int, date_str.split('/'))
                     target_date = date(year, month, day)
                 elif re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', date_str):
                     # Alternative date format (12-25-2024)
-                    logger.info("Parsing as alternative date format")
                     month, day, year = map(int, date_str.split('-'))
                     target_date = date(year, month, day)
                 else:
                     # Try to parse as ISO date anyway
-                    logger.info("Attempting ISO date parsing as fallback")
                     try:
                         target_date = datetime.fromisoformat(date_str).date()
                     except ValueError as ve:
@@ -1006,29 +996,21 @@ Please check your API keys and try a different model."""
                         target_date = None
             elif isinstance(date_picker_value, date):
                 # Direct date object
-                logger.info("Processing as date object")
                 target_date = date_picker_value
             elif isinstance(date_picker_value, datetime):
                 # DateTime object - extract date part
-                logger.info("Processing as datetime object")
                 target_date = date_picker_value.date()
             elif hasattr(date_picker_value, 'year') and hasattr(date_picker_value, 'month') and hasattr(date_picker_value, 'day'):
                 # Date-like object with year, month, day attributes
-                logger.info("Processing as date-like object with year/month/day attributes")
                 target_date = date(date_picker_value.year, date_picker_value.month, date_picker_value.day)
             elif hasattr(date_picker_value, 'date') and callable(getattr(date_picker_value, 'date')):
                 # DateTime object with date() method
-                logger.info("Processing as datetime object with date() method")
                 target_date = date_picker_value.date()
             else:
                 logger.warning(f"Unrecognized date picker value format: {date_picker_value} (type: {type(date_picker_value)})")
-                # Check if it has attributes we can inspect
-                if hasattr(date_picker_value, '__dict__'):
-                    logger.info(f"Object attributes: {date_picker_value.__dict__}")
                 # Try to convert to string and parse
                 try:
                     str_value = str(date_picker_value)
-                    logger.info(f"Attempting to parse string representation: '{str_value}'")
                     if re.match(r'^\d{4}-\d{2}-\d{2}', str_value):
                         target_date = datetime.fromisoformat(str_value.split()[0]).date()
                     else:
@@ -1039,10 +1021,8 @@ Please check your API keys and try a different model."""
             
             # If we couldn't parse the date, use today as fallback
             if target_date is None:
-                logger.warning(f"Could not parse date picker value: {date_picker_value} (type: {type(date_picker_value)}), using today")
+                logger.warning(f"Could not parse date picker value: {date_picker_value}, using today")
                 target_date = date.today()
-            
-            logger.info(f"Parsed target_date: {target_date}")
             
             # Validate the date is reasonable (not too far in past/future)
             today = date.today()
@@ -1054,15 +1034,11 @@ Please check your API keys and try a different model."""
                 target_date = today
             
             target_date_str = target_date.isoformat()
-            logger.info(f"Final target_date_str: {target_date_str}")
-            
             calendar_html = UIHandlers.refresh_calendar_with_date(view_type, target_date_str)
             
             # Format date for display
             formatted_date = target_date.strftime('%A, %B %d, %Y')
             current_date_display = f"**Current View:** {formatted_date}"
-            
-            logger.info(f"Successfully jumped to date: {target_date_str} (view: {view_type})")
             
             # Convert target_date back to timestamp for the DateTime component
             target_datetime = datetime.combine(target_date, datetime.min.time())
