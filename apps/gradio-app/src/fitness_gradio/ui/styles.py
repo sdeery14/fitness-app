@@ -267,6 +267,32 @@ MAIN_CSS = """
     max-width: 200px !important;
 }
 
+/* Current date display styles */
+.current-date-display {
+    margin: 10px 0 !important;
+    padding: 8px 12px !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+    font-size: 14px !important;
+}
+
+.current-date-display p {
+    margin: 0 !important;
+    color: #1e40af !important;
+}
+
+/* Dark theme support for current date display */
+.dark .current-date-display {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+.dark .current-date-display p {
+    color: #93c5fd !important;
+}
+
 /* Month View Styles */
 .calendar-grid.month-view {
     display: flex;

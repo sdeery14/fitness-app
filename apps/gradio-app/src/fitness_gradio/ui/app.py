@@ -64,7 +64,7 @@ class FitnessAppUI:
             with gr.Row():
                 with gr.Column():
                     gr.Markdown("## 📅 Training Schedule Calendar")
-                    calendar_html, calendar_view_selector, calendar_prev_btn, calendar_next_btn, calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date = UIComponents.create_calendar_section()
+                    calendar_html, calendar_view_selector, calendar_prev_btn, calendar_next_btn, calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date, current_date_display = UIComponents.create_calendar_section()
             
             # Voice conversation state
             voice_state = gr.State(value=VoiceConversationState())
@@ -89,7 +89,7 @@ class FitnessAppUI:
                 voice_exit_btn, voice_row, voice_state,
                 plan_display, view_plan_btn, clear_plan_btn,
                 calendar_html, calendar_view_selector, calendar_prev_btn, calendar_next_btn, 
-                calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date
+                calendar_today_btn, calendar_date_picker, refresh_calendar_btn, calendar_current_date, current_date_display
             )
     
     def _setup_event_handlers(
@@ -119,7 +119,8 @@ class FitnessAppUI:
         calendar_today_btn: gr.Button,
         calendar_date_picker: gr.DateTime,
         refresh_calendar_btn: gr.Button,
-        calendar_current_date: gr.Textbox
+        calendar_current_date: gr.Textbox,
+        current_date_display: gr.Markdown
     ) -> None:
         """Set up all event handlers."""
         
@@ -277,25 +278,25 @@ class FitnessAppUI:
         calendar_prev_btn.click(
             lambda current_date, view_type: UIHandlers.navigate_calendar(current_date, view_type, "prev"),
             inputs=[calendar_current_date, calendar_view_selector],
-            outputs=[calendar_html, calendar_current_date]
+            outputs=[calendar_html, calendar_current_date, current_date_display, calendar_date_picker]
         )
         
         calendar_next_btn.click(
             lambda current_date, view_type: UIHandlers.navigate_calendar(current_date, view_type, "next"),
             inputs=[calendar_current_date, calendar_view_selector],
-            outputs=[calendar_html, calendar_current_date]
+            outputs=[calendar_html, calendar_current_date, current_date_display, calendar_date_picker]
         )
         
         calendar_today_btn.click(
             UIHandlers.go_to_today,
             inputs=[calendar_view_selector],
-            outputs=[calendar_html, calendar_current_date]
+            outputs=[calendar_html, calendar_current_date, current_date_display, calendar_date_picker]
         )
         
         calendar_date_picker.change(
             UIHandlers.jump_to_date,
             inputs=[calendar_date_picker, calendar_view_selector],
-            outputs=[calendar_html, calendar_current_date]
+            outputs=[calendar_html, calendar_current_date, current_date_display, calendar_date_picker]
         )
         
         # Update calendar after bot responses (when new fitness plans are created)

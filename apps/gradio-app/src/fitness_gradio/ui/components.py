@@ -2,8 +2,10 @@
 UI components for the fitness app.
 """
 import gradio as gr
+import calendar
+import re
 from typing import List, Any
-from datetime import date
+from datetime import date, datetime
 
 from fitness_core.agents import FitnessAgent
 from fitness_core.agents.providers import ModelProvider
@@ -1014,7 +1016,7 @@ class UIComponents:
         Create the training calendar section with navigation controls and view options.
         
         Returns:
-            Tuple of (calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date)
+            Tuple of (calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date, current_date_display)
         """
         from datetime import date
         
@@ -1060,13 +1062,13 @@ class UIComponents:
                 scale=2
             )
             
-            # Date picker for jumping to specific dates
+            # Date picker for jumping to specific dates - improved for better UX
             date_picker = gr.DateTime(
-                value=date.today().isoformat(),
-                label="Jump to Date",
-                info="Select a date to navigate to",
-                elem_classes=["date-picker"],
-                scale=1
+                value=datetime.now(),  # Use datetime.now() which works correctly
+                label="📅 Jump to Date",
+                info="Click the calendar icon to select a date",
+                interactive=True,
+                include_time=False  # Only show date picker, not time
             )
             
             refresh_calendar_btn = gr.Button(
@@ -1076,6 +1078,14 @@ class UIComponents:
                 scale=1
             )
         
+        # Small row to show current viewing date in readable format
+        with gr.Row():
+            current_date_display = gr.Markdown(
+                value=f"**Current View:** {date.today().strftime('%A, %B %d, %Y')}",
+                elem_classes=["current-date-display"],
+                visible=True
+            )
+        
         # Hidden component to track current date being displayed
         current_date = gr.Textbox(
             value=date.today().isoformat(),
@@ -1083,7 +1093,7 @@ class UIComponents:
             label="Current Display Date"
         )
         
-        return calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date
+        return calendar_html, view_selector, prev_btn, next_btn, today_btn, date_picker, refresh_calendar_btn, current_date, current_date_display
 
     @staticmethod
     def _get_initial_calendar_html() -> str:

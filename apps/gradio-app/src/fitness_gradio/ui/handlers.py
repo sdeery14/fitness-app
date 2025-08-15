@@ -857,10 +857,11 @@ Please check your API keys and try a different model."""
             direction: Navigation direction ("prev" or "next")
             
         Returns:
-            Tuple of (updated_calendar_html, new_current_date)
+            Tuple of (updated_calendar_html, new_current_date, current_date_display, date_picker_value)
         """
         try:
             from .components import UIComponents
+            from datetime import datetime
             
             # Calculate new date
             new_date_str = UIComponents.calculate_navigation_date(current_date_str, view_type, direction)
@@ -868,13 +869,34 @@ Please check your API keys and try a different model."""
             # Refresh calendar with new date
             calendar_html = UIHandlers.refresh_calendar_with_date(view_type, new_date_str)
             
-            return calendar_html, new_date_str
+            # Format date for display
+            new_date = datetime.fromisoformat(new_date_str).date()
+            formatted_date = new_date.strftime('%A, %B %d, %Y')
+            current_date_display = f"**Current View:** {formatted_date}"
+            
+            # Convert to timestamp for DateTime component
+            new_datetime = datetime.combine(new_date, datetime.min.time())
+            new_timestamp = new_datetime.timestamp()
+            
+            return calendar_html, new_date_str, current_date_display, new_timestamp
             
         except Exception as e:
             logger.error(f"Error navigating calendar: {str(e)}")
             # Return current state on error
+            from datetime import date
             current_calendar = UIHandlers.refresh_calendar_with_date(view_type, current_date_str)
-            return current_calendar, current_date_str
+            try:
+                current_date = datetime.fromisoformat(current_date_str).date()
+                formatted_date = current_date.strftime('%A, %B %d, %Y')
+                current_date_display = f"**Current View:** {formatted_date}"
+                current_datetime = datetime.combine(current_date, datetime.min.time())
+                current_timestamp = current_datetime.timestamp()
+            except:
+                current_date = datetime.fromisoformat(current_date_str).date() if current_date_str else date.today()
+                current_date_display = f"**Current View:** {current_date_str}"
+                current_datetime = datetime.combine(current_date, datetime.min.time())
+                current_timestamp = current_datetime.timestamp()
+            return current_calendar, current_date_str, current_date_display, current_timestamp
 
     @staticmethod
     def go_to_today(view_type: str) -> tuple:
@@ -885,63 +907,177 @@ Please check your API keys and try a different model."""
             view_type: Type of calendar view to display
             
         Returns:
-            Tuple of (updated_calendar_html, today_date_str)
+            Tuple of (updated_calendar_html, today_date_str, current_date_display, date_picker_value)
         """
         try:
-            from datetime import date
+            from datetime import date, datetime
             
-            today_str = date.today().isoformat()
+            today = date.today()
+            today_str = today.isoformat()
             calendar_html = UIHandlers.refresh_calendar_with_date(view_type, today_str)
             
-            return calendar_html, today_str
+            # Format today's date for display
+            today_formatted = today.strftime('%A, %B %d, %Y')
+            current_date_display = f"**Current View:** {today_formatted}"
+            
+            # Convert to timestamp for DateTime component
+            today_datetime = datetime.combine(today, datetime.min.time())
+            today_timestamp = today_datetime.timestamp()
+            
+            return calendar_html, today_str, current_date_display, today_timestamp
             
         except Exception as e:
+            from datetime import date, datetime
             logger.error(f"Error going to today: {str(e)}")
-            return UIHandlers.refresh_calendar(view_type), date.today().isoformat()
+            today = date.today()
+            today_str = today.isoformat()
+            today_formatted = today.strftime('%A, %B %d, %Y')
+            today_datetime = datetime.combine(today, datetime.min.time())
+            today_timestamp = today_datetime.timestamp()
+            return UIHandlers.refresh_calendar(view_type), today_str, f"**Current View:** {today_formatted}", today_timestamp
 
     @staticmethod
     def jump_to_date(date_picker_value, view_type: str) -> tuple:
         """
         Jump the calendar to a specific date from the date picker.
+        Supports both manual text input and calendar selection.
         
         Args:
             date_picker_value: Date value from the date picker component
             view_type: Type of calendar view to display
             
         Returns:
-            Tuple of (updated_calendar_html, target_date_str)
+            Tuple of (updated_calendar_html, target_date_str, current_date_display, date_picker_value)
         """
         try:
             from datetime import datetime, date
+            import re
             
-            # Handle different date picker formats
-            if isinstance(date_picker_value, str):
-                if 'T' in date_picker_value:
-                    # ISO datetime format
-                    target_date = datetime.fromisoformat(date_picker_value.split('T')[0]).date()
+            # Debug logging to understand the input format
+            logger.info(f"jump_to_date received: {date_picker_value} (type: {type(date_picker_value)})")
+            
+            target_date = None
+            
+            # Handle None or empty values
+            if date_picker_value is None:
+                logger.info("Received None value, using today")
+                target_date = date.today()
+            elif isinstance(date_picker_value, (int, float)):
+                # Unix timestamp (most common case for gr.DateTime)
+                logger.info(f"Processing Unix timestamp: {date_picker_value}")
+                try:
+                    target_date = datetime.fromtimestamp(date_picker_value).date()
+                except (ValueError, OSError) as e:
+                    logger.warning(f"Failed to parse timestamp {date_picker_value}: {e}")
+                    target_date = date.today()
+            elif isinstance(date_picker_value, str):
+                # String input - handle various formats
+                date_str = date_picker_value.strip()
+                logger.info(f"Processing string date: '{date_str}'")
+                
+                if not date_str:
+                    logger.warning("Empty date string received")
+                    target_date = date.today()
+                elif 'T' in date_str:
+                    # ISO datetime format (2024-12-25T00:00:00)
+                    logger.info("Parsing as ISO datetime format")
+                    target_date = datetime.fromisoformat(date_str.split('T')[0]).date()
+                elif re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                    # ISO date format (2024-12-25) - most common from gr.DateTime
+                    logger.info("Parsing as ISO date format")
+                    target_date = datetime.fromisoformat(date_str).date()
+                elif re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', date_str):
+                    # US date format (12/25/2024)
+                    logger.info("Parsing as US date format")
+                    month, day, year = map(int, date_str.split('/'))
+                    target_date = date(year, month, day)
+                elif re.match(r'^\d{1,2}-\d{1,2}-\d{4}$', date_str):
+                    # Alternative date format (12-25-2024)
+                    logger.info("Parsing as alternative date format")
+                    month, day, year = map(int, date_str.split('-'))
+                    target_date = date(year, month, day)
                 else:
-                    # ISO date format
-                    target_date = datetime.fromisoformat(date_picker_value).date()
-            elif hasattr(date_picker_value, 'date'):
-                # DateTime object
-                target_date = date_picker_value.date()
+                    # Try to parse as ISO date anyway
+                    logger.info("Attempting ISO date parsing as fallback")
+                    try:
+                        target_date = datetime.fromisoformat(date_str).date()
+                    except ValueError as ve:
+                        logger.warning(f"Failed to parse date string '{date_str}': {ve}")
+                        target_date = None
             elif isinstance(date_picker_value, date):
-                # Date object
+                # Direct date object
+                logger.info("Processing as date object")
                 target_date = date_picker_value
+            elif isinstance(date_picker_value, datetime):
+                # DateTime object - extract date part
+                logger.info("Processing as datetime object")
+                target_date = date_picker_value.date()
+            elif hasattr(date_picker_value, 'year') and hasattr(date_picker_value, 'month') and hasattr(date_picker_value, 'day'):
+                # Date-like object with year, month, day attributes
+                logger.info("Processing as date-like object with year/month/day attributes")
+                target_date = date(date_picker_value.year, date_picker_value.month, date_picker_value.day)
+            elif hasattr(date_picker_value, 'date') and callable(getattr(date_picker_value, 'date')):
+                # DateTime object with date() method
+                logger.info("Processing as datetime object with date() method")
+                target_date = date_picker_value.date()
             else:
-                # Fallback to today
+                logger.warning(f"Unrecognized date picker value format: {date_picker_value} (type: {type(date_picker_value)})")
+                # Check if it has attributes we can inspect
+                if hasattr(date_picker_value, '__dict__'):
+                    logger.info(f"Object attributes: {date_picker_value.__dict__}")
+                # Try to convert to string and parse
+                try:
+                    str_value = str(date_picker_value)
+                    logger.info(f"Attempting to parse string representation: '{str_value}'")
+                    if re.match(r'^\d{4}-\d{2}-\d{2}', str_value):
+                        target_date = datetime.fromisoformat(str_value.split()[0]).date()
+                    else:
+                        target_date = None
+                except Exception as conv_error:
+                    logger.warning(f"Failed to convert to string: {conv_error}")
+                    target_date = None
+            
+            # If we couldn't parse the date, use today as fallback
+            if target_date is None:
+                logger.warning(f"Could not parse date picker value: {date_picker_value} (type: {type(date_picker_value)}), using today")
                 target_date = date.today()
             
+            logger.info(f"Parsed target_date: {target_date}")
+            
+            # Validate the date is reasonable (not too far in past/future)
+            today = date.today()
+            min_date = date(today.year - 10, 1, 1)  # 10 years ago
+            max_date = date(today.year + 10, 12, 31)  # 10 years from now
+            
+            if target_date < min_date or target_date > max_date:
+                logger.warning(f"Date {target_date} is outside reasonable range, using today")
+                target_date = today
+            
             target_date_str = target_date.isoformat()
+            logger.info(f"Final target_date_str: {target_date_str}")
+            
             calendar_html = UIHandlers.refresh_calendar_with_date(view_type, target_date_str)
             
-            logger.info(f"Jumped to date: {target_date_str}")
-            return calendar_html, target_date_str
+            # Format date for display
+            formatted_date = target_date.strftime('%A, %B %d, %Y')
+            current_date_display = f"**Current View:** {formatted_date}"
+            
+            logger.info(f"Successfully jumped to date: {target_date_str} (view: {view_type})")
+            
+            # Convert target_date back to timestamp for the DateTime component
+            target_datetime = datetime.combine(target_date, datetime.min.time())
+            target_timestamp = target_datetime.timestamp()
+            
+            return calendar_html, target_date_str, current_date_display, target_timestamp
             
         except Exception as e:
-            logger.error(f"Error jumping to date: {str(e)}")
-            today_str = date.today().isoformat()
-            return UIHandlers.refresh_calendar(view_type), today_str
+            logger.error(f"Error jumping to date with value '{date_picker_value}': {str(e)}", exc_info=True)
+            today = date.today()
+            today_str = today.isoformat()
+            today_formatted = today.strftime('%A, %B %d, %Y')
+            today_datetime = datetime.combine(today, datetime.min.time())
+            today_timestamp = today_datetime.timestamp()
+            return UIHandlers.refresh_calendar(view_type), today_str, f"**Current View:** {today_formatted}", today_timestamp
 
     @staticmethod
     def handle_voice_input(

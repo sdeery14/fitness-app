@@ -68,7 +68,9 @@ def main():
         app.launch(**gradio_config)
         
     except Exception as e:
+        import traceback
         logger.error(f"Failed to start Gradio app: {str(e)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         sys.exit(1)
 
 
