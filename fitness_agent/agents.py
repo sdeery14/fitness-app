@@ -6,10 +6,10 @@ from datetime import datetime
 from agents import Agent
 from dotenv import load_dotenv
 
-from .agent_models import AgentConfig
-from .providers import ModelProvider
+from .models import AgentConfig
+from .services import ModelProvider
 from .tools import get_tool_functions, get_combined_instructions
-from .user_session import SessionManager, UserProfile
+from .memory import SessionManager, UserProfile
 
 load_dotenv()
 
@@ -72,32 +72,22 @@ class FitnessAgent(Agent):
         """Refresh user profile - useful for long conversations."""
         self._load_user_profile()
 
-    def get_profile_summary(self) -> str:
-        """Get a summary of the current user profile for debugging."""
-        if not self._has_profile_data():
-            return "No user profile data loaded"
-        
-        return f"Profile loaded at {self._profile_loaded_at}: {self._format_profile_context()}"
-
-    def _has_profile_data(self) -> bool:
-        """Check if the user profile has meaningful data."""
-        if not self.user_profile:
-            return False
-        
-        return any([
-            self.user_profile.name,
-            self.user_profile.age,
-            self.user_profile.fitness_level,
-            self.user_profile.goals,
-            self.user_profile.equipment_available
-        ])
-
     def _format_profile_context(self) -> str:
         """Format user profile for system prompt context."""
         if not self.user_profile:
             return ""
         
         profile = self.user_profile
+        
+        # Check if the user profile has meaningful data
+        if not any([
+            profile.name,
+            profile.age,
+            profile.fitness_level,
+            profile.goals,
+            profile.equipment_available
+        ]):
+            return ""
         context_parts = []
         
         if profile.name:
@@ -138,8 +128,8 @@ Unless specified otherwise, do not respond with any lists or bullet points. Talk
 Do not talk about anything outside of fitness and nutrition, and do not provide any medical advice. Always recommend that the user consults with a healthcare provider before starting any new fitness program."""
 
         # Add user profile context if available
-        if self._has_profile_data():
-            profile_context = self._format_profile_context()
+        profile_context = self._format_profile_context()
+        if profile_context:
             return f"""{base_prompt}
 
 USER PROFILE:
@@ -148,38 +138,3 @@ USER PROFILE:
 Remember this information about the user when providing recommendations and creating fitness plans."""
         
         return base_prompt
-
-    @classmethod
-    def list_supported_models(cls) -> dict:
-        """Return a dictionary of supported model names and their full identifiers."""
-        return ModelProvider.SUPPORTED_MODELS.copy()
-
-    @classmethod
-    def get_model_info(cls, model_name: str) -> str:
-        """Get information about a specific model."""
-        return ModelProvider.get_model_info(model_name)
-
-    @classmethod
-    def get_recommended_models(cls) -> list:
-        """Get a list of recommended models that are most likely to be available."""
-        return ModelProvider.get_recommended_models()
-
-    @classmethod 
-    def get_models_by_provider(cls) -> dict:
-        """Get models organized by provider."""
-        return ModelProvider.get_models_by_provider()
-
-    @classmethod
-    def get_models_table_data(cls) -> list:
-        """Get model data formatted for table display."""
-        return ModelProvider.get_models_table_data()
-
-    @classmethod
-    def validate_model_name(cls, model_name: str) -> tuple[bool, str]:
-        """
-        Validate if a model name is in our supported list and provide helpful feedback.
-        
-        Returns:
-            tuple: (is_valid, message)
-        """
-        return ModelProvider.validate_model_name(model_name)

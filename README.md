@@ -1,22 +1,43 @@
 # 🏋️ Fitness AI Assistant
 
-An AI-powered fitness companion that provides personalized workout plans, meal planning, and fitness guidance using state-of-the-art language models.
+A personal AI-powered fitness and nutrition assistant that helps create personalized training plans and meal plans using state-of-the-art language models.
 
 ## ✨ Features
 
-- **🎤 Voice Input**: Record voice messages using Groq's Whisper for speech-to-text
-- **🤖 Multiple AI Models**: Choose from OpenAI, Anthropic, and Groq models
-- **� Conversational Interface**: Natural conversation with memory across sessions
-- **📋 Personalized Plans**: Custom workout and meal plans based on your goals
+- **🤖 Multiple AI Models**: Choose from OpenAI (GPT-4), Anthropic (Claude), and Groq (Llama) models
+- **💬 Conversational Interface**: Natural conversation with memory across sessions
+- **📋 Personalized Plans**: Custom workout and meal plans based on your goals, fitness level, and equipment
+- **👤 User Profiles**: The assistant remembers your preferences, goals, and limitations
 - **🔄 Real-time Streaming**: See AI responses as they're generated
-- **📁 File Support**: Upload documents for context
+- **🎯 Smart Tools**: Built-in tools for creating fitness plans and managing user profiles
+- **🌐 Web Interface**: Clean, easy-to-use Gradio web interface
 
-## �🚀 Quick Start
+## 🏗️ Project Structure
+
+```
+fitness-app/
+├── fitness_agent/          # Core fitness agent logic
+│   ├── __init__.py
+│   ├── agents.py           # Main FitnessAgent class
+│   ├── models.py           # Data models (FitnessPlan, TrainingPlan, etc.)
+│   ├── services.py         # Agent runner and model providers
+│   ├── memory.py           # User session and profile management
+│   ├── tools.py            # Agent tools and functions
+│   └── utils.py            # Configuration and utilities
+├── gradio_app/             # Web interface
+│   ├── __init__.py
+│   └── app.py              # Gradio UI application
+├── requirements.txt        # Python dependencies
+├── app.py                  # Main entry point - run this!
+└── README.md               # This file
+```
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.12+
-- Poetry (for dependency management)
-- API Keys: OpenAI, Anthropic, and/or Groq
+- API Keys: OpenAI, Anthropic, and/or Groq (at least one required)
 
 ### Setup
 
@@ -28,151 +49,184 @@ An AI-powered fitness companion that provides personalized workout plans, meal p
 
 2. **Install dependencies:**
    ```bash
-   cd apps/gradio-app
-   poetry install
+   pip install -r requirements.txt
    ```
 
-3. **Configure your API keys:**
+3. **Set up environment variables:**
    ```bash
-   # Set environment variables (Windows PowerShell)
-   $env:OPENAI_API_KEY = "your_openai_key_here"
-   $env:ANTHROPIC_API_KEY = "your_anthropic_key_here"
-   $env:GROQ_API_KEY = "your_groq_key_here"
+   # Create a .env file with your API keys
+   OPENAI_API_KEY=your_openai_key_here
+   ANTHROPIC_API_KEY=your_anthropic_key_here
+   GROQ_API_KEY=your_groq_key_here
+   ```
+
+   Or set them directly:
+   ```bash
+   # Windows PowerShell
+   $env:GROQ_API_KEY = "your_groq_key"
+   $env:OPENAI_API_KEY = "your_openai_key"
+   $env:ANTHROPIC_API_KEY = "your_anthropic_key"
    
-   # Or create a .env file in the project root
-   cp .env.example .env
-   # Edit .env and add your API keys
+   # Linux/Mac
+   export GROQ_API_KEY="your_groq_key"
+   export OPENAI_API_KEY="your_openai_key"
+   export ANTHROPIC_API_KEY="your_anthropic_key"
    ```
 
 4. **Run the application:**
    ```bash
-   cd apps/gradio-app
-   poetry run fitness-gradio
+   python app.py
    ```
 
-5. **Open your browser to `http://localhost:7860`**
+5. **Open in browser:**
+   - Go to `http://localhost:7860`
 
-## 🏗️ Project Structure
+## 🤖 AI Models
 
-This project uses a **monorepo structure** with a clean separation of concerns:
+### Recommended Models (Fast & Free)
 
-```
-fitness-app/
-├── shared/                    # 📦 Core business logic library
-│   └── src/fitness_core/     # AI agents, models, services
-├── apps/
-│   └── gradio-app/           # 🎨 Web interface with voice support
-├── tests/                    # 🧪 Test files
-├── docs/                     # 📚 Documentation
-├── app.py                    # � Hugging Face Spaces entry point
-└── .github/workflows/        # 🔄 CI/CD pipelines
-```
+**Groq Models** (Recommended - Fast & Free):
+- **llama-3.3-70b-versatile**: Best for complex fitness plans and detailed advice
+- **llama-3.1-8b-instant**: Fastest responses for quick questions
+- **mixtral-8x7b-32768**: Good balance of speed and capability
 
-### Core Library (`fitness_core`)
-- **agents/**: AI agent implementations with multi-provider support
-- **services/**: Business logic (conversation management, streaming)
-- **utils/**: Configuration, logging, and utilities
+**OpenAI Models**:
+- **gpt-4o-mini**: Efficient and capable, good balance of cost and performance
+- **gpt-4o**: Most capable for complex reasoning and detailed plans
 
-### Gradio App
-- **ui/**: User interface components and handlers
-- **Voice Support**: Groq Whisper integration for speech-to-text
-- **Real-time Streaming**: Live AI response generation
+**Anthropic Models**:
+- **claude-3.5-haiku**: Fast responses with good capability
+- **claude-3.5-sonnet**: High-quality responses for detailed planning
 
-## 🤖 Supported AI Models
+### API Key Setup
 
-### 🟢 OpenAI Models
-- **GPT-4o**: Latest with vision capabilities
-- **GPT-4o-mini**: Fast, capable, cost-effective ⭐ *Default*
-- **GPT-4 Turbo**: Large context window
-- **GPT-3.5 Turbo**: Most economical
-- **o1/o3 models**: Advanced reasoning
-
-### 🔵 Anthropic Models  
-- **Claude-3.5 Sonnet**: Excellent reasoning and analysis
-- **Claude-3.5 Haiku**: Fast and responsive
-- **Claude-3 Haiku**: Most cost-effective
-- **Claude-4 models**: Premium capabilities
-
-### 🚀 Groq Models (Ultra-Fast)
-- **Llama-3.3-70b**: Excellent for complex fitness plans
-- **Mixtral-8x7b**: Great for structured output
-- **Whisper models**: Speech-to-text transcription
-
-## 🎤 Voice Input
-
-Click the microphone button to speak your fitness questions. Requires GROQ_API_KEY.
-## 🛠️ Development
-
-Edit `shared/src/fitness_core/` for core logic, `apps/gradio-app/src/` for UI.
-
-Run: `python start.py`
-
-## 🎯 Usage
-
-1. Run the app: `python start.py`
-2. Open http://localhost:7860
-3. Select an AI model
-4. Chat: *"Create a beginner workout plan for weight loss"*
-
-## 🔧 Configuration
-
-All configuration is handled through environment variables:
+Set your API key for your preferred provider:
 
 ```bash
-# API Keys (at least one required)
-OPENAI_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
+# For Groq (recommended - fast & free)
+GROQ_API_KEY=your_groq_key
 
-# Model Selection
-AI_MODEL=gpt-4o-mini  # Default model to use
+# For OpenAI
+OPENAI_API_KEY=your_openai_key
 
-# Server Configuration  
-SERVER_PORT=7860      # Gradio server port
-DEBUG=false           # Debug mode
-
-# Logging
-LOG_LEVEL=INFO        # DEBUG, INFO, WARNING, ERROR
-LOG_FILE=app.log      # Optional log file
+# For Anthropic
+ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
-## 🚀 Deployment
+## 💬 Usage Guide
 
-### Docker (Coming Soon)
-```bash
-docker-compose up
+### Getting Started
+
+1. **Tell the assistant about yourself:**
+   - Your fitness goals (weight loss, muscle building, endurance, etc.)
+   - Current fitness level (beginner, intermediate, advanced)
+   - Available equipment (home gym, commercial gym, bodyweight only)
+   - Any limitations, injuries, or preferences
+
+2. **Ask for help:**
+   - "Create a 12-week muscle building program"
+   - "I'm a beginner, what should I start with?"
+   - "Plan a nutrition strategy for weight loss"
+   - "Design a home workout with no equipment"
+   - "Update my fitness plan based on my progress"
+
+### Example Conversations
+
 ```
+You: I'm a beginner looking to lose weight. I have access to a gym.
+GROQ_API_KEY=your_groq_key
 
-### Manual Deployment
-Each app can be deployed independently:
+# For OpenAI
+OPENAI_API_KEY=your_openai_key
 
-```bash
-# Deploy Gradio app
-cd apps/gradio-app
-poetry build
-# Deploy the built package
-```
+# For Anthropic
+ANTHROPIC_API_KEY=your_anthropic_key
+`
 
-## 🤝 Contributing
+##  Usage Guide
+
+### Getting Started
+
+1. **Tell the assistant about yourself:**
+   - Your fitness goals (weight loss, muscle building, endurance, etc.)
+   - Current fitness level (beginner, intermediate, advanced)
+   - Available equipment (home gym, commercial gym, bodyweight only)
+   - Any limitations, injuries, or preferences
+
+2. **Ask for help:**
+   - Create a 12-week muscle building program
+   - I'm a beginner, what should I start with?
+   - Plan a nutrition strategy for weight loss
+   - Design a home workout with no equipment
+   - Update my fitness plan based on my progress
+
+##  Configuration
+
+Key configuration options in fitness_agent/utils.py:
+- **SERVER_NAME**: Default 0.0.0.0 (all interfaces)
+- **SERVER_PORT**: Default 7860
+- **DEFAULT_MODEL**: Default llama-3.3-70b-versatile
+- **DEBUG**: Set to true for development
+
+##  Dependencies
+
+Core dependencies:
+- openai-agents[litellm]: AI agent framework
+- gradio: Web interface
+- pydantic: Data validation
+- python-dotenv: Environment management
+
+Optional:
+- reportlab: PDF generation for fitness plans
+- scipy: Scientific computing
+- groq, openai, anthropic: Additional AI providers
+
+##  Development
+
+This simplified structure makes it easy to:
+- **Understand the codebase**: Clear separation between agent logic and UI
+- **Make changes**: Fewer files to navigate, simpler imports
+- **Add features**: Extend the agent tools or UI components
+- **Deploy**: Single requirements file, straightforward setup
+
+### Adding Features
+
+- **Agent tools**: Add to fitness_agent/tools.py
+- **UI components**: Modify gradio_app/app.py
+- **Models**: Add to fitness_agent/models.py
+- **Core logic**: Edit fitness_agent/agents.py
+
+### Code Style
+
+- Use type hints
+- Add docstrings for public functions
+- Keep functions small and focused
+
+##  Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes in the appropriate app or shared library
+2. Create a feature branch: git checkout -b feature/amazing-feature
+3. Make your changes
 4. Add tests for new functionality
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
+5. Commit your changes: git commit -m 'Add amazing feature'
+6. Push to the branch: git push origin feature/amazing-feature
 7. Open a Pull Request
 
-## 📄 License
+##  License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🆘 Support
+##  Support
 
-- 📖 [Development Guide](docs/DEVELOPMENT.md) - How to extend the app
-- 🤖 [AI Models Guide](docs/MODELS.md) - Model setup and configuration
+- Always consult healthcare professionals before starting new exercise programs
+- This AI assistant provides general guidance, not medical advice
 
-## 🎉 Acknowledgments
+##  Acknowledgments
 
-- Built with [OpenAI Agents](https://github.com/openai/openai-agents) library
-- UI powered by [Gradio](https://gradio.app/)
-- Model support via [LiteLLM](https://github.com/BerriAI/litellm)
+- Built with OpenAI Agents library
+- UI powered by Gradio
+- Model support via LiteLLM
+
+---
+
+**Happy training! **

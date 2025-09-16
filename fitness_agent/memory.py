@@ -1,15 +1,12 @@
 """
-User session management for fitness planning.
+Memory and session management for the fitness agent.
 """
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Optional, Dict, Any, List
 from datetime import datetime, date, timedelta
 from dataclasses import dataclass, field
 import uuid
 
-from .fitness_plan_models import FitnessPlan
-
-if TYPE_CHECKING:
-    from .tools import ScheduledTrainingDay
+from .models import FitnessPlan
 
 
 @dataclass
@@ -52,9 +49,6 @@ class UserSession:
     current_fitness_plan: Optional[FitnessPlan] = None
     fitness_plan_history: List[FitnessPlan] = field(default_factory=list)
     
-    # Training schedule data
-    current_schedule: List['ScheduledTrainingDay'] = field(default_factory=list)
-    
     # Progress tracking
     workout_logs: List[WorkoutLog] = field(default_factory=list)
     measurements: Dict[str, Any] = field(default_factory=dict)
@@ -76,30 +70,11 @@ class UserSession:
         if self.current_fitness_plan:
             self.fitness_plan_history.append(self.current_fitness_plan)
         self.current_fitness_plan = None
-        self.current_schedule = []  # Clear schedule when plan is cleared
         self.last_updated = datetime.now()
     
     def has_fitness_plan(self) -> bool:
         """Check if a fitness plan is currently set."""
         return self.current_fitness_plan is not None
-    
-    def set_schedule(self, schedule: List['ScheduledTrainingDay']) -> None:
-        """Set the current training schedule."""
-        self.current_schedule = schedule
-        self.last_updated = datetime.now()
-    
-    def get_schedule(self) -> List['ScheduledTrainingDay']:
-        """Get the current training schedule."""
-        return self.current_schedule
-    
-    def clear_schedule(self) -> None:
-        """Clear the current training schedule."""
-        self.current_schedule = []
-        self.last_updated = datetime.now()
-    
-    def has_schedule(self) -> bool:
-        """Check if a training schedule is currently set."""
-        return len(self.current_schedule) > 0
     
     def update_profile(self, **kwargs) -> None:
         """Update user profile information."""
@@ -127,7 +102,6 @@ class UserSession:
         """Clear all user data including profile, fitness plan, and schedule."""
         self.profile = UserProfile()
         self.current_fitness_plan = None
-        self.current_schedule = []
         self.workout_logs.clear()
         self.measurements.clear()
         self.last_updated = datetime.now()
@@ -204,3 +178,6 @@ class SessionManager:
         """Clear all sessions."""
         cls._sessions.clear()
         cls._current_session_id = None
+
+
+__all__ = ['UserProfile', 'WorkoutLog', 'UserSession', 'SessionManager']

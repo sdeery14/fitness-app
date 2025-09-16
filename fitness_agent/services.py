@@ -1,16 +1,71 @@
 """
-Fitness agent execution and streaming functionality.
+Services for the fitness agent including model providers and agent runner.
 """
+import os
 import asyncio
 import logging
-from typing import Union, List, Dict, Any, Generator, AsyncGenerator
+from typing import Union, List, Dict, Any, Generator, AsyncGenerator, Optional
 from concurrent.futures import ThreadPoolExecutor
 from agents import Runner
 
-from ..agents.fitness_agent import FitnessAgent
-from .exceptions import AgentExecutionError
+from .models import AgentConfig, FitnessPlan
 
 logger = logging.getLogger(__name__)
+
+
+class ModelProvider:
+    """Manages AI model configurations and provider-specific logic."""
+
+    # Available models - simplified list of most commonly used
+    SUPPORTED_MODELS = {
+        # OpenAI models (most reliable)
+        "gpt-4o": "gpt-4o",
+        "gpt-4o-mini": "gpt-4o-mini", 
+        "gpt-4-turbo": "gpt-4-turbo",
+        "gpt-3.5-turbo": "gpt-3.5-turbo",
+        
+        # Anthropic models
+        "claude-3.5-sonnet": "litellm/anthropic/claude-3-5-sonnet-20241022",
+        "claude-3.5-haiku": "litellm/anthropic/claude-3-5-haiku-20241022",
+        "claude-3-haiku": "litellm/anthropic/claude-3-haiku-20240307",
+        
+        # Groq models (fast and cost-effective)
+        "llama-3.3-70b-versatile": "litellm/groq/llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant": "litellm/groq/llama-3.1-8b-instant",
+        "mixtral-8x7b-32768": "litellm/groq/mixtral-8x7b-32768",
+    }
+
+    @classmethod
+    def resolve_model_name(cls, model_name: Optional[str] = None) -> str:
+        """Resolve model name from various sources."""
+        if model_name and model_name in cls.SUPPORTED_MODELS:
+            return model_name
+            
+        # Check environment variables
+        for env_var in ["AI_MODEL", "ANTHROPIC_MODEL", "OPENAI_MODEL"]:
+            env_model = os.getenv(env_var)
+            if env_model and env_model in cls.SUPPORTED_MODELS:
+                return env_model
+                
+        # Default to a reliable model
+        return "llama-3.3-70b-versatile"
+
+    @classmethod
+    def get_final_model_identifier(cls, model_name: str) -> str:
+        """Get the full model identifier."""
+        return cls.SUPPORTED_MODELS.get(model_name, model_name)
+
+    @classmethod
+    def get_provider(cls, resolved_model_name: str, full_model_name: str) -> str:
+        """Get the provider name for a model."""
+        if "gpt-" in resolved_model_name or "o1-" in resolved_model_name:
+            return "openai"
+        elif "claude" in resolved_model_name:
+            return "anthropic"
+        elif "groq" in full_model_name or "llama" in resolved_model_name or "mixtral" in resolved_model_name:
+            return "groq"
+        else:
+            return "unknown"
 
 
 class FitnessAgentRunner:
@@ -18,7 +73,7 @@ class FitnessAgentRunner:
     
     @staticmethod
     def run_agent_with_streaming_sync(
-        agent: FitnessAgent, 
+        agent, 
         agent_input: Union[str, List[Dict[str, str]]]
     ) -> Generator[Dict[str, Any], None, None]:
         """
@@ -37,14 +92,11 @@ class FitnessAgentRunner:
             # Handle event loop creation for worker threads
             def _run_with_new_loop():
                 """Create a new event loop and run the agent"""
-                # Create a new event loop for this thread
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    # Now we can use Runner.run_sync which will use this loop
                     return Runner.run_sync(agent, agent_input)
                 finally:
-                    # Clean up the loop
                     loop.close()
                     asyncio.set_event_loop(None)
             
@@ -86,7 +138,7 @@ class FitnessAgentRunner:
 
     @staticmethod
     async def run_agent_with_streaming(
-        agent: FitnessAgent, 
+        agent, 
         agent_input: Union[str, List[Dict[str, str]]]
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
@@ -115,7 +167,7 @@ class FitnessAgentRunner:
                         accumulated_content += chunk.content
                         has_content = True
                         yield {
-                            'type': 'chunk',
+                            'type': 'content',
                             'content': chunk.content,
                             'accumulated': accumulated_content
                         }
@@ -163,7 +215,7 @@ class FitnessAgentRunner:
 
     @staticmethod
     def run_agent_safely_sync(
-        agent: FitnessAgent, 
+        agent, 
         agent_input: Union[str, List[Dict[str, str]]]
     ) -> Any:
         """
@@ -180,14 +232,11 @@ class FitnessAgentRunner:
             # Handle event loop creation for worker threads
             def _run_with_new_loop():
                 """Create a new event loop and run the agent"""
-                # Create a new event loop for this thread
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    # Now we can use Runner.run_sync which will use this loop
                     return Runner.run_sync(agent, agent_input)
                 finally:
-                    # Clean up the loop
                     loop.close()
                     asyncio.set_event_loop(None)
             
@@ -196,7 +245,6 @@ class FitnessAgentRunner:
                 return Runner.run_sync(agent, agent_input)
             except RuntimeError as e:
                 if "no current event loop" in str(e).lower() or "anyio worker thread" in str(e).lower():
-                    # We're in a worker thread, create new event loop
                     return _run_with_new_loop()
                 else:
                     raise
@@ -231,8 +279,7 @@ class FitnessAgentRunner:
                 
                 # Check if this looks like a fitness plan
                 if hasattr(content, 'name') and hasattr(content, 'training_plan'):
-                    from .formatters import ResponseFormatter
-                    return ResponseFormatter.format_fitness_plan(content)
+                    return f"Created fitness plan: {content.name}\n\n{content.description}"
                 else:
                     return str(content)
             elif hasattr(result, 'content'):
@@ -244,3 +291,14 @@ class FitnessAgentRunner:
         except Exception as e:
             logger.error(f"Error extracting content from result: {str(e)}")
             return f"Sorry, I encountered an error while formatting the response: {str(e)}"
+
+
+# Exception classes for better error handling
+class AgentExecutionError(Exception):
+    """Exception raised when agent execution fails."""
+    pass
+
+
+class ConfigurationError(Exception):
+    """Exception raised when configuration is invalid."""
+    pass
