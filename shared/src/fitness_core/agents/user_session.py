@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 from dataclasses import dataclass, field
 import uuid
 
-from .fitness_plan_model import FitnessPlan
+from .fitness_plan_models import FitnessPlan
 
 if TYPE_CHECKING:
     from .tools import ScheduledTrainingDay

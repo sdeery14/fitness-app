@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from agents import function_tool, RunContextWrapper
 
-from .fitness_plan_model import FitnessPlan, TrainingDay, IntensityLevel
+from .fitness_plan_models import FitnessPlan
+from .training_plan_models import TrainingDay, IntensityLevel
 from .user_session import SessionManager, UserProfile
 
 logger = logging.getLogger(__name__)
