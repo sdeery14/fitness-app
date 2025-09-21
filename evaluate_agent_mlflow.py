@@ -33,6 +33,9 @@ async def evaluate_prompts(prompts: List[str]) -> None:
         active = mlflow.active_run()
         run_suffix = (os.getenv("EVAL_RUN_SUFFIX") or (active.info.run_id if active else uuid.uuid4().hex))[:8]
         mlflow.log_param("eval_run_suffix", run_suffix)
+        # Also make the MLflow run name unique for UI clarity
+        base_run_name = os.getenv("MLFLOW_RUN_NAME", "fitness-eval")
+        mlflow.set_tag("mlflow.runName", f"{base_run_name}-{run_suffix}")
 
         for i, prompt in enumerate(prompts, 1):
             try:
