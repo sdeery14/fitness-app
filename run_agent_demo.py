@@ -2,7 +2,7 @@ import os
 import asyncio
 from agents import Runner
 
-from fitness_agent import build_fitness_agent, init_engine_and_session, with_session
+from app.fitness_agent import build_fitness_agent, init_engine_and_session, with_session
 
 
 async def main() -> None:

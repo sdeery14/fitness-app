@@ -1,13 +1,14 @@
 import os
+print("CWD:", os.getcwd())
 import asyncio
 from typing import List
 
 import mlflow
 from agents import Runner
-import uuid  # NEW
+import uuid 
 
-from fitness_agent import build_fitness_agent, init_engine_and_session, with_session
-from memory import UserAwareSession
+from app.fitness_agent import build_fitness_agent, init_engine_and_session, with_session
+from app.memory import UserAwareSession
 
 
 async def evaluate_prompts(prompts: List[str]) -> None:

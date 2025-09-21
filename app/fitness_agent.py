@@ -5,8 +5,8 @@ from typing import Tuple, Optional
 from agents import Agent, function_tool
 from dotenv import load_dotenv
 
-from db import get_async_engine, init_db
-from memory import UserAwareSession
+from app.db import get_async_engine, init_db
+from app.memory import UserAwareSession
 
 load_dotenv()
 

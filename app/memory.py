@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db import get_async_engine, get_sessions_engine
-from models import User, UserProfile, UserSession, UserMeasurement
+from app.db import get_async_engine, get_sessions_engine
+from app.models import User, UserProfile, UserSession, UserMeasurement
 
 
 class UserAwareSession(SessionABC):

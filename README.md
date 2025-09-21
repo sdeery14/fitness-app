@@ -41,7 +41,8 @@ docker compose up --build -d
 4) Run the demo
 
 ```powershell
-poetry run python run_agent_demo.py
+# From repo root; run as a module so the app package is importable
+poetry run python -m app.run_agent_demo
 ```
 
 If `OPENAI_API_KEY` is not set, the script will initialize the database tables and exit.
@@ -51,7 +52,8 @@ If `OPENAI_API_KEY` is not set, the script will initialize the database tables a
 This project includes a minimal MLflow evaluation harness that uses `mlflow.openai.autolog()` to capture LLM traces.
 
 ```powershell
-poetry run python evaluate_agent_mlflow.py
+# From repo root; run as a module
+poetry run python -m app.evals.evaluate_agent_mlflow
 ```
 
 Environment variables you may want to set:
@@ -63,11 +65,19 @@ Environment variables you may want to set:
 - `DB_SCHEMA` – Optional Postgres schema name to create/use
 - `DEMO_USER_ID`, `DEMO_SESSION_ID`, `DEMO_USER_NAME`, `DEMO_USER_TZ` – Defaults used by the demo/eval scripts
 
-### Files
+### VS Code
 
-- `models.py` – SQLAlchemy models for users, profiles, and user-sessions
-- `db.py` – Async engine factory and database initialization
-- `memory.py` – `UserAwareSession` that composes `SQLAlchemySession` for items and manages user/profile binding
-- `fitness_agent.py` – Functions to build the agent and initialize engine/session (no side effects)
-- `run_agent_demo.py` – Simple demo runner to send one message
-- `evaluate_agent_mlflow.py` – Minimal MLflow evaluation harness
+A debug configuration is provided to run the MLflow eval as a module:
+
+- Launch: “Python Debugger: Run eval module” (runs `python -m app.evals.evaluate_agent_mlflow` from the workspace root)
+
+### Project layout
+
+- `app/`
+  - `db.py` – Async engine factory and database initialization
+  - `fitness_agent.py` – Functions to build the agent and initialize engine/session (no side effects)
+  - `memory.py` – `UserAwareSession` that composes `SQLAlchemySession` and manages user/profile binding
+  - `models.py` – SQLAlchemy models for users, profiles, and user-sessions
+  - `run_agent_demo.py` – Simple demo runner to send one message
+  - `evals/`
+    - `evaluate_agent_mlflow.py` – Minimal MLflow evaluation harness

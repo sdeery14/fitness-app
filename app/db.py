@@ -85,7 +85,7 @@ def get_sessions_engine(url: Optional[str] = None) -> AsyncEngine:
 
 async def init_db(engine: AsyncEngine) -> None:
     """Create tables for our local models if not present."""
-    from models import Base as ModelsBase  # local import to avoid cyclic
+    from app.models import Base as ModelsBase  # local import to avoid cyclic
 
     async with engine.begin() as conn:
         # If DB_SCHEMA is set for Postgres, ensure the schema exists and is in search_path

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Run eval module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.evals.evaluate_agent_mlflow",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}" // Force working directory to project root
+    }
+  ]
+}
