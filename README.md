@@ -41,14 +41,33 @@ docker compose up --build -d
 4) Run the demo
 
 ```powershell
-poetry run python fitness_agent.py
+poetry run python run_agent_demo.py
 ```
 
-If `OPENAI_API_KEY` is not set, the script will initialize the database tables and exit; if set, it will perform a quick agent run with session memory.
+If `OPENAI_API_KEY` is not set, the script will initialize the database tables and exit.
+
+### MLflow evaluation
+
+This project includes a minimal MLflow evaluation harness that uses `mlflow.openai.autolog()` to capture LLM traces.
+
+```powershell
+poetry run python evaluate_agent_mlflow.py
+```
+
+Environment variables you may want to set:
+
+- `MLFLOW_TRACKING_URI` – Where MLflow should log runs (e.g., http://127.0.0.1:5000 or a file path)
+- `MLFLOW_RUN_NAME` – Optional run name label
+- `OPENAI_API_KEY` – Required to make model calls
+- `DATABASE_URL` – Postgres connection string (postgresql:// or postgresql+asyncpg://)
+- `DB_SCHEMA` – Optional Postgres schema name to create/use
+- `DEMO_USER_ID`, `DEMO_SESSION_ID`, `DEMO_USER_NAME`, `DEMO_USER_TZ` – Defaults used by the demo/eval scripts
 
 ### Files
 
 - `models.py` – SQLAlchemy models for users, profiles, and user-sessions
 - `db.py` – Async engine factory and database initialization
 - `memory.py` – `UserAwareSession` that composes `SQLAlchemySession` for items and manages user/profile binding
-- `fitness_agent.py` – Example showing how to create and use the user-aware session
+- `fitness_agent.py` – Functions to build the agent and initialize engine/session (no side effects)
+- `run_agent_demo.py` – Simple demo runner to send one message
+- `evaluate_agent_mlflow.py` – Minimal MLflow evaluation harness

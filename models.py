@@ -20,6 +20,12 @@ class User(Base):
 
     profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
     sessions: Mapped[list["UserSession"]] = relationship(back_populates="user")
+    # Historical body measurements (height/weight over time)
+    measurements: Mapped[list["UserMeasurement"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="UserMeasurement.measured_at.desc()",
+    )
 
 
 class UserProfile(Base):
@@ -51,3 +57,30 @@ class UserSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class UserMeasurement(Base):
+    """Track changes in a user's height and weight over time.
+
+    Notes
+    - height_cm and weight_kg are both optional to allow recording one without the other
+    - A uniqueness constraint on (user_id, measured_at) prevents accidental duplicates
+    """
+
+    __tablename__ = "fa_user_measurements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "measured_at", name="uq_fa_user_measurements_user_ts"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("fa_users.id", ondelete="CASCADE"), index=True
+    )
+    measured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    height_cm: Mapped[Optional[int]] = mapped_column(nullable=True)
+    weight_kg: Mapped[Optional[float]] = mapped_column(nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="measurements")

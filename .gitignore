@@ -228,3 +228,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# MLflow artifacts and local runs
+#  MLflow stores runs and artifacts under ./mlruns by default.
+#  Ignore these to avoid committing run logs and generated artifacts.
+mlruns/
+# If using a separate local artifact root
+mlartifacts/
+# If using SQLite backend locally
+mlruns.db

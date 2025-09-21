@@ -16,3 +16,4 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- - users (user accounts)
 -- - user_sessions (links users to their agent sessions)  
 -- - user_profiles (extended user information for fitness)
+-- - user_measurements (historical height/weight records)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
+from datetime import datetime, timezone
 from agents.items import TResponseInputItem
 from agents.memory.session import SessionABC
 from agents.extensions.memory.sqlalchemy_session import SQLAlchemySession
@@ -9,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_async_engine, get_sessions_engine
-from models import User, UserProfile, UserSession
+from models import User, UserProfile, UserSession, UserMeasurement
 
 
 class UserAwareSession(SessionABC):
@@ -133,3 +134,44 @@ class UserAwareSession(SessionABC):
         return await self.ensure_user_and_session(
             display_name=info.get("display_name"), timezone=info.get("timezone")
         )
+
+    # ---- Measurements helpers ----
+    async def add_measurement(
+        self,
+        *,
+        height_cm: Optional[int] = None,
+        weight_kg: Optional[float] = None,
+        measured_at: Optional[datetime] = None,
+        note: Optional[str] = None,
+    ) -> UserMeasurement:
+        """Record a new height/weight measurement for the current user.
+
+        Either value can be omitted to record just one of them.
+        """
+        if height_cm is None and weight_kg is None:
+            raise ValueError("Provide at least one of height_cm or weight_kg")
+        user = await self.ensure_user_and_session()
+        async with self._session_factory() as db:
+            measurement = UserMeasurement(
+                user_id=user.id,
+                measured_at=measured_at or datetime.now(timezone.utc),
+                height_cm=height_cm,
+                weight_kg=weight_kg,
+                note=note,
+            )
+            db.add(measurement)
+            await db.commit()
+            await db.refresh(measurement)
+            return measurement
+
+    async def get_measurements(self, *, limit: int = 50) -> List[UserMeasurement]:
+        """Fetch recent measurements for the current user, newest first."""
+        user = await self.ensure_user_and_session()
+        async with self._session_factory() as db:
+            result = await db.execute(
+                select(UserMeasurement)
+                .where(UserMeasurement.user_id == user.id)
+                .order_by(UserMeasurement.measured_at.desc())
+                .limit(limit)
+            )
+            return list(result.scalars())
