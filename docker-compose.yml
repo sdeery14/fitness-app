@@ -5,9 +5,9 @@ services:
     image: postgres:15
     container_name: fitness_app_postgres
     environment:
-      POSTGRES_DB: fitness_app
-      POSTGRES_USER: fitness_user
-      POSTGRES_PASSWORD: fitness_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -21,8 +21,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: fitness_app_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@fitness-app.com
-      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "8080:80"
     volumes:

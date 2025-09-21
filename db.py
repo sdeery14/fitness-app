@@ -66,21 +66,17 @@ def get_async_engine(url: Optional[str] = None) -> AsyncEngine:
 def get_sessions_engine(url: Optional[str] = None) -> AsyncEngine:
     """Engine intended for Agents SDK session tables.
 
-    Uses AGENTS_DATABASE_URL if set; otherwise uses the main DATABASE_URL.
-    Only Postgres is allowed; no SQLite fallback.
+    Always uses the main DATABASE_URL (no separate agents DB). Only Postgres is allowed.
     """
-    raw = url or os.getenv("AGENTS_DATABASE_URL") or os.getenv("DATABASE_URL")
-    if not raw:
-        raise RuntimeError(
-            "No database URL found. Set DATABASE_URL (or AGENTS_DATABASE_URL) in your .env to a Postgres URL."
-        )
-    coerced = _coerce_to_async_url(raw)
+    # Reuse the same validation and coercion logic as the primary engine
+    coerced = _coerce_to_async_url(url) if url else get_database_url()
     lowered = coerced.lower()
     if not lowered.startswith("postgresql+asyncpg://"):
         raise RuntimeError(
-            f"Invalid database URL for sessions. Expected Postgres. Got '{raw}'. Use postgresql:// or postgresql+asyncpg://."
+            "Invalid database URL for sessions. Expected Postgres (postgresql+asyncpg://)."
         )
-    db_schema = os.getenv("AGENTS_DB_SCHEMA")
+    # Use the app-wide DB schema if provided
+    db_schema = os.getenv("DB_SCHEMA")
     connect_args = None
     if db_schema and lowered.startswith("postgresql+asyncpg://"):
         connect_args = {"server_settings": {"search_path": db_schema}}

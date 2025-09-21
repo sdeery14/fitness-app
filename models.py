@@ -3,7 +3,7 @@ from datetime import datetime
 import uuid
 from typing import Optional
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy import String, DateTime, ForeignKey, func
+from sqlalchemy import String, DateTime, ForeignKey, func, UniqueConstraint
 
 
 class Base(DeclarativeBase):
@@ -39,6 +39,9 @@ class UserProfile(Base):
 
 class UserSession(Base):
     __tablename__ = "fa_user_sessions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "session_id", name="uq_fa_user_sessions_user_session"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("fa_users.id", ondelete="CASCADE"), index=True)
